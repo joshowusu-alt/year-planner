@@ -67,7 +67,7 @@ export function SettingsPage() {
   ]
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="p-4 md:p-6 max-w-2xl">
       <h2
         className="text-xl font-black tracking-widest uppercase mb-6"
         style={{ color: '#d4af37' }}

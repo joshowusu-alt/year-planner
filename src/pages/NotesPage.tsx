@@ -264,9 +264,9 @@ export function NotesPage() {
   const pinnedCount = yearNotes.filter((n) => n.pinned).length
 
   return (
-    <div className="flex flex-col flex-1 p-6 overflow-auto" style={{ background: '#0a0e1a' }}>
+    <div className="flex flex-col flex-1 p-4 md:p-6 overflow-auto" style={{ background: '#0a0e1a' }}>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
+      <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 flex-wrap">
         <div>
           <h2 className="text-xl font-black tracking-widest uppercase" style={{ color: '#d4af37' }}>
             Notes & Priorities

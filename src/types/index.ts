@@ -183,6 +183,32 @@ export interface UserProfile {
   avatarUrl?: string
 }
 
+// ─── Strategic Planning ──────────────────────────────────────────────────────
+
+export interface VitalFew {
+  id: string
+  title: string
+  weekStart: string    // yyyy-MM-dd (Monday)
+  year: number
+  completed: boolean
+  goalId?: string      // optional link to a Goal
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WeeklyReview {
+  id: string
+  weekStart: string    // yyyy-MM-dd
+  year: number
+  answers: {
+    movedForward: string
+    wastedTime: string
+    nextVitalFew: string
+  }
+  createdAt: string
+  updatedAt: string
+}
+
 // ─── Planner Store ───────────────────────────────────────────────────────────
 
 export interface PlannerStore {
@@ -191,6 +217,8 @@ export interface PlannerStore {
   goals: Goal[]
   tasks: Task[]
   notes: Note[]
+  vitalFew: VitalFew[]
+  weeklyReviews: WeeklyReview[]
   categories: EventCategoryDef[]   // user-defined event categories
   organizationName: string
   plannerTitle: string

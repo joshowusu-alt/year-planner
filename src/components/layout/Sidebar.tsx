@@ -1,8 +1,8 @@
-import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut } from 'lucide-react'
+import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import { useAuth } from '../../context/AuthContext'
 
-export type Page = 'planner' | 'monthly' | 'weekly' | 'goals' | 'tasks' | 'notes' | 'settings'
+export type Page = 'planner' | 'monthly' | 'weekly' | 'goals' | 'tasks' | 'notes' | 'settings' | 'strategy'
 
 interface Props {
   page: Page
@@ -19,6 +19,7 @@ export function Sidebar({ page, onNavigate }: Props) {
     { id: 'weekly',   label: 'Weekly View',  icon: Calendar },
     { id: 'goals',    label: 'Goals',        icon: Target },
     { id: 'tasks',    label: 'Tasks',        icon: CheckSquare },
+    { id: 'strategy', label: 'Strategy',     icon: Layers },
     { id: 'notes',    label: 'Notes',        icon: FileText },
   ]
 

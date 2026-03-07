@@ -9,6 +9,8 @@ import { usePlanner } from '../../context/PlannerContext'
 import type { PlannerEvent, RecurrenceRule } from '../../types'
 import { PRIORITY_COLORS, getCategoryStyle } from '../../types'
 import { EventModal } from '../planner/EventModal'
+import { EventBottomSheet } from '../planner/EventBottomSheet'
+import { useBreakpoint } from '../../hooks/useMediaQuery'
 
 export function WeeklyView() {
   const {
@@ -24,6 +26,8 @@ export function WeeklyView() {
   const [newTaskDate, setNewTaskDate] = useState<string | null>(null)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [draggedEventId, setDraggedEventId] = useState<string | null>(null)
+  const [bottomSheetDate, setBottomSheetDate] = useState<string | null>(null)
+  const { isMobile } = useBreakpoint()
 
   const weekStart = new Date(currentWeekStart)
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -90,7 +94,7 @@ export function WeeklyView() {
     <div className="flex flex-col flex-1" style={{ background: '#0a0e1a' }}>
       {/* Header */}
       <div
-        className="flex items-center gap-3 px-6 py-4 no-print flex-wrap"
+        className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 no-print flex-wrap"
         style={{ borderBottom: '1px solid #1e2d40' }}
       >
         <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-white/10">
@@ -119,16 +123,22 @@ export function WeeklyView() {
 
         <button
           onClick={() => { setEditingEvent(null); setModalDate(format(new Date(), 'yyyy-MM-dd')) }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
           style={{ background: '#d4af37', color: '#111827' }}
         >
           <Plus size={13} /> Add Event
         </button>
       </div>
 
-      {/* Week columns */}
+      {/* Week columns — grid on desktop, vertical cards on mobile */}
       <div className="flex-1 overflow-auto">
-        <div className="grid grid-cols-7 h-full" style={{ minWidth: '700px' }}>
+        <div
+          className={isMobile
+            ? 'flex flex-col gap-2 p-3'
+            : 'grid grid-cols-7 h-full'
+          }
+          style={isMobile ? {} : { minWidth: '700px' }}
+        >
           {days.map((date) => {
             const events = getEvents(date)
             const tasks = getTasks(date)
@@ -139,15 +149,24 @@ export function WeeklyView() {
             return (
               <div
                 key={dateStr}
-                className="flex flex-col border-r"
-                style={{ borderColor: '#1e2d40', background: today ? '#0d1a2e' : 'transparent' }}
+                className={isMobile
+                  ? 'rounded-xl p-3'
+                  : 'flex flex-col border-r'
+                }
+                style={isMobile
+                  ? { background: today ? '#0d1a2e' : '#0d1224', border: '1px solid #1e2d40' }
+                  : { borderColor: '#1e2d40', background: today ? '#0d1a2e' : 'transparent' }
+                }
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => onDrop(dateStr)}
               >
                 {/* Day header */}
                 <div
-                  className="flex flex-col items-center py-3 border-b sticky top-0"
-                  style={{ borderColor: '#1e2d40', background: today ? '#0d1a2e' : '#0a0e1a' }}
+                  className={isMobile
+                    ? 'flex items-center gap-3 pb-2 mb-2 border-b'
+                    : 'flex flex-col items-center py-3 border-b sticky top-0'
+                  }
+                  style={{ borderColor: '#1e2d40', background: isMobile ? 'transparent' : (today ? '#0d1a2e' : '#0a0e1a') }}
                 >
                   <span
                     className={`text-xs font-bold uppercase tracking-wider ${sunday ? 'text-red-400' : 'text-slate-500'}`}
@@ -161,10 +180,15 @@ export function WeeklyView() {
                   >
                     {format(date, 'd')}
                   </span>
+                  {isMobile && (
+                    <span className="flex-1 text-xs text-slate-400">
+                      {events.length} event{events.length !== 1 ? 's' : ''}, {tasks.length} task{tasks.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 p-2 space-y-1.5 overflow-y-auto">
+                <div className={isMobile ? 'space-y-1.5' : 'flex-1 p-2 space-y-1.5 overflow-y-auto'}>
                   {/* Events */}
                   {events.map((ev) => {
                     const catStyle = getCategoryStyle(ev.category, store.categories)
@@ -249,9 +273,18 @@ export function WeeklyView() {
 
                 {/* Add event button */}
                 <button
-                  className="flex items-center justify-center gap-1 py-2 text-xs text-slate-600 hover:text-yellow-400 hover:bg-white/5 transition-colors border-t"
+                  className={isMobile
+                    ? 'flex items-center justify-center gap-1 py-2 mt-2 text-xs text-slate-600 active:text-yellow-400 active:bg-white/5 transition-colors border-t rounded-lg'
+                    : 'flex items-center justify-center gap-1 py-2 text-xs text-slate-600 hover:text-yellow-400 hover:bg-white/5 transition-colors border-t'
+                  }
                   style={{ borderColor: '#1e2d40' }}
-                  onClick={() => { setEditingEvent(null); setModalDate(dateStr) }}
+                  onClick={() => {
+                    if (isMobile) {
+                      setBottomSheetDate(dateStr)
+                    } else {
+                      setEditingEvent(null); setModalDate(dateStr)
+                    }
+                  }}
                 >
                   <Plus size={11} /> event
                 </button>
@@ -271,6 +304,14 @@ export function WeeklyView() {
           onClose={() => { setModalDate(null); setEditingEvent(null) }}
         />
       )}
+
+      {/* Mobile bottom sheet */}
+      <EventBottomSheet
+        date={bottomSheetDate}
+        onClose={() => setBottomSheetDate(null)}
+        onAddEvent={(ds) => { setBottomSheetDate(null); setEditingEvent(null); setModalDate(ds) }}
+        onEditEvent={(ev) => { setBottomSheetDate(null); setEditingEvent(ev); setModalDate(null) }}
+      />
     </div>
   )
 }

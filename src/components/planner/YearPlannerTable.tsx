@@ -90,10 +90,10 @@ function MonthColumn({
   })
 
   return (
-    <div className="flex-1 min-w-0">
+    <div className="flex-1 w-full md:w-auto min-w-0">
       {/* Month header */}
       <div
-        className="text-center font-black tracking-widest uppercase py-2 text-sm"
+        className="text-center font-black tracking-widest uppercase py-2 text-xs md:text-sm"
         style={{ color: '#d4af37', borderBottom: '2px solid #d4af37' }}
       >
         {MONTH_NAMES[month - 1]}
@@ -236,9 +236,9 @@ export function YearPlannerTable({ year, startMonth }: Props) {
         {MONTH_NAMES[startMonth + 1]}
       </div>
 
-      {/* 3-month grid */}
+      {/* 3-month grid — stacks vertically on mobile */}
       <div
-        className="flex divide-x rounded-lg overflow-hidden"
+        className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x rounded-lg overflow-hidden"
         style={{
           border: '1px solid #1e2d40',
           background: '#0d1224',

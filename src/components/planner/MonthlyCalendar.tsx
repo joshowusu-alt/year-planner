@@ -20,6 +20,8 @@ import { usePlanner } from '../../context/PlannerContext'
 import type { PlannerEvent, RecurrenceRule } from '../../types'
 import { MONTH_NAMES, getCategoryStyle } from '../../types'
 import { EventModal } from '../planner/EventModal'
+import { EventBottomSheet } from '../planner/EventBottomSheet'
+import { useBreakpoint } from '../../hooks/useMediaQuery'
 
 interface DayCellProps {
   date: Date
@@ -38,7 +40,7 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
 
   return (
     <div
-      className={`min-h-24 p-1.5 flex flex-col border-b border-r group cursor-pointer transition-colors hover:bg-white/5 ${
+      className={`min-h-16 md:min-h-24 p-1 md:p-1.5 flex flex-col border-b border-r group cursor-pointer transition-colors hover:bg-white/5 ${
         !isCurrentMonth ? 'opacity-30' : ''
       }`}
       style={{ borderColor: '#1e2d40' }}
@@ -105,6 +107,8 @@ export function MonthlyCalendar() {
 
   const [modalDate, setModalDate] = useState<string | null>(null)
   const [editingEvent, setEditingEvent] = useState<PlannerEvent | null>(null)
+  const [bottomSheetDate, setBottomSheetDate] = useState<string | null>(null)
+  const { isMobile } = useBreakpoint()
 
   const viewDate = new Date(currentYear, currentMonth - 1, 1)
 
@@ -152,7 +156,7 @@ export function MonthlyCalendar() {
     <div className="flex flex-col flex-1" style={{ background: '#0a0e1a' }}>
       {/* Header */}
       <div
-        className="flex items-center gap-4 px-6 py-4 no-print"
+        className="flex items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 no-print"
         style={{ borderBottom: '1px solid #1e2d40' }}
       >
         <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
@@ -187,7 +191,7 @@ export function MonthlyCalendar() {
       </div>
 
       {/* Calendar grid */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-2 md:p-4">
         {/* Weekday headers */}
         <div className="grid grid-cols-7">
           {WEEKDAY_HEADERS.map((d) => (
@@ -211,7 +215,13 @@ export function MonthlyCalendar() {
               events={getEventsForDay(date)}
               taskCount={getTaskCount(date)}
               noteCount={getNoteCount(date)}
-              onAddEvent={(ds) => { setEditingEvent(null); setModalDate(ds) }}
+              onAddEvent={(ds) => {
+                if (isMobile) {
+                  setBottomSheetDate(ds)
+                } else {
+                  setEditingEvent(null); setModalDate(ds)
+                }
+              }}
               onEditEvent={(ev) => { setEditingEvent(ev); setModalDate(null) }}
             />
           ))}
@@ -228,6 +238,14 @@ export function MonthlyCalendar() {
           onClose={() => { setModalDate(null); setEditingEvent(null) }}
         />
       )}
+
+      {/* Mobile bottom sheet */}
+      <EventBottomSheet
+        date={bottomSheetDate}
+        onClose={() => setBottomSheetDate(null)}
+        onAddEvent={(ds) => { setBottomSheetDate(null); setEditingEvent(null); setModalDate(ds) }}
+        onEditEvent={(ev) => { setBottomSheetDate(null); setEditingEvent(ev); setModalDate(null) }}
+      />
     </div>
   )
 }

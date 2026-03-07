@@ -14,7 +14,7 @@ export function TopBar({ year, onAddEvent, onPrint }: Props) {
 
   return (
     <div
-      className="sticky top-0 z-30 flex flex-col gap-2 px-6 py-3 no-print"
+      className="sticky top-0 z-30 flex flex-col gap-2 px-4 md:px-6 py-3 no-print"
       style={{
         background: '#0a0e1a',
         borderBottom: '1px solid #1e2d40',

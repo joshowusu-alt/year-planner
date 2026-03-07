@@ -17,6 +17,8 @@ import type {
   Task,
   Note,
   Milestone,
+  VitalFew,
+  WeeklyReview,
 } from '../types'
 import { isRecurringOnDate, getBaseEventId } from '../types'
 import { useAuth } from './AuthContext'
@@ -45,6 +47,11 @@ import {
   addCategory as storageAddCategory,
   updateCategory as storageUpdateCategory,
   removeCategory as storageRemoveCategory,
+  createVitalFew,
+  updateVitalFew,
+  deleteVitalFew,
+  createWeeklyReview,
+  updateWeeklyReview,
 } from '../lib/storage'
 
 // ─── Context type ─────────────────────────────────────────────────────────────
@@ -80,6 +87,13 @@ interface PlannerContextValue {
   addCategory: (cat: Omit<EventCategoryDef, 'id'>) => void
   updateCategory: (id: string, patch: Partial<EventCategoryDef>) => void
   removeCategory: (id: string) => void
+  // Vital Few
+  addVitalFew: (item: Omit<VitalFew, 'id' | 'createdAt' | 'updatedAt'>) => void
+  editVitalFew: (id: string, patch: Partial<VitalFew>) => void
+  removeVitalFew: (id: string) => void
+  // Weekly Reviews
+  addWeeklyReview: (item: Omit<WeeklyReview, 'id' | 'createdAt' | 'updatedAt'>) => void
+  editWeeklyReview: (id: string, patch: Partial<WeeklyReview>) => void
   // Navigation state
   currentYear: number
   setCurrentYear: (y: number) => void
@@ -270,6 +284,28 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setStore((s) => storageRemoveCategory(s, id))
   }, [])
 
+  // ── Vital Few ──
+  const addVitalFew = useCallback((item: Omit<VitalFew, 'id' | 'createdAt' | 'updatedAt'>) => {
+    setStore((s) => createVitalFew(s, item))
+  }, [])
+
+  const editVitalFew = useCallback((id: string, patch: Partial<VitalFew>) => {
+    setStore((s) => updateVitalFew(s, id, patch))
+  }, [])
+
+  const removeVitalFew = useCallback((id: string) => {
+    setStore((s) => deleteVitalFew(s, id))
+  }, [])
+
+  // ── Weekly Reviews ──
+  const addWeeklyReview = useCallback((item: Omit<WeeklyReview, 'id' | 'createdAt' | 'updatedAt'>) => {
+    setStore((s) => createWeeklyReview(s, item))
+  }, [])
+
+  const editWeeklyReview = useCallback((id: string, patch: Partial<WeeklyReview>) => {
+    setStore((s) => updateWeeklyReview(s, id, patch))
+  }, [])
+
   return (
     <PlannerContext.Provider value={{
       store,
@@ -280,6 +316,8 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       addNote, editNote, removeNote,
       updateSettings,
       addCategory, updateCategory, removeCategory,
+      addVitalFew, editVitalFew, removeVitalFew,
+      addWeeklyReview, editWeeklyReview,
       currentYear, setCurrentYear,
       currentMonth, setCurrentMonth,
       currentWeekStart, setCurrentWeekStart,

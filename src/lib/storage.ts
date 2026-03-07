@@ -2,7 +2,7 @@
  * Local-storage data layer.
  * Supabase sync is layered on top when credentials are configured.
  */
-import type { PlannerStore, MonthMeta, Goal, Task, Note, Milestone, EventCategoryDef } from '../types'
+import type { PlannerStore, MonthMeta, Goal, Task, Note, Milestone, EventCategoryDef, VitalFew, WeeklyReview } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
 import { format } from 'date-fns'
 import { supabase, isSupabaseConfigured } from './supabase'
@@ -31,6 +31,8 @@ function defaultStore(): PlannerStore {
     goals: [],
     tasks: [],
     notes: [],
+    vitalFew: [],
+    weeklyReviews: [],
     categories: DEFAULT_CATEGORIES,
     organizationName: '',
     plannerTitle: '',
@@ -291,6 +293,54 @@ export function updateCategory(store: PlannerStore, id: string, patch: Partial<E
 
 export function removeCategory(store: PlannerStore, id: string): PlannerStore {
   return { ...store, categories: store.categories.filter((c) => c.id !== id) }
+}
+
+// ─── VitalFew CRUD ─────────────────────────────────────────────────────────────
+
+export function createVitalFew(
+  store: PlannerStore,
+  item: Omit<VitalFew, 'id' | 'createdAt' | 'updatedAt'>
+): PlannerStore {
+  const now = new Date().toISOString()
+  return {
+    ...store,
+    vitalFew: [...(store.vitalFew ?? []), { ...item, id: crypto.randomUUID(), createdAt: now, updatedAt: now }],
+  }
+}
+
+export function updateVitalFew(store: PlannerStore, id: string, patch: Partial<VitalFew>): PlannerStore {
+  return {
+    ...store,
+    vitalFew: (store.vitalFew ?? []).map((v) =>
+      v.id === id ? { ...v, ...patch, updatedAt: new Date().toISOString() } : v
+    ),
+  }
+}
+
+export function deleteVitalFew(store: PlannerStore, id: string): PlannerStore {
+  return { ...store, vitalFew: (store.vitalFew ?? []).filter((v) => v.id !== id) }
+}
+
+// ─── WeeklyReview CRUD ─────────────────────────────────────────────────────────
+
+export function createWeeklyReview(
+  store: PlannerStore,
+  item: Omit<WeeklyReview, 'id' | 'createdAt' | 'updatedAt'>
+): PlannerStore {
+  const now = new Date().toISOString()
+  return {
+    ...store,
+    weeklyReviews: [...(store.weeklyReviews ?? []), { ...item, id: crypto.randomUUID(), createdAt: now, updatedAt: now }],
+  }
+}
+
+export function updateWeeklyReview(store: PlannerStore, id: string, patch: Partial<WeeklyReview>): PlannerStore {
+  return {
+    ...store,
+    weeklyReviews: (store.weeklyReviews ?? []).map((r) =>
+      r.id === id ? { ...r, ...patch, updatedAt: new Date().toISOString() } : r
+    ),
+  }
 }
 
 // ─── Export helpers ───────────────────────────────────────────────────────────

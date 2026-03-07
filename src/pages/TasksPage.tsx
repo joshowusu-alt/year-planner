@@ -232,9 +232,9 @@ export function TasksPage() {
   const completedCount = allTasks.filter((t) => t.completed).length
 
   return (
-    <div className="flex flex-col flex-1 p-6 overflow-auto" style={{ background: '#0a0e1a' }}>
+    <div className="flex flex-col flex-1 p-4 md:p-6 overflow-auto" style={{ background: '#0a0e1a' }}>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
+      <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 flex-wrap">
         <div>
           <h2 className="text-xl font-black tracking-widest uppercase" style={{ color: '#d4af37' }}>
             Task Lists
@@ -268,7 +268,7 @@ export function TasksPage() {
       </div>
 
       {/* Priority filter */}
-      <div className="flex gap-2 mb-5 flex-wrap">
+      <div className="flex gap-2 mb-4 md:mb-5 flex-wrap">
         {(['all', 'critical', 'high', 'medium', 'low'] as const).map((p) => (
           <button
             key={p}

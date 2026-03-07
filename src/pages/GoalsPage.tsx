@@ -403,7 +403,7 @@ function ParetoInsight({ goals }: { goals: Goal[] }) {
           </div>
 
           {/* Two-column detail */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: '#d4af37' }}>
                 Vital Few — High Impact
@@ -471,9 +471,9 @@ export function GoalsPage() {
   }))
 
   return (
-    <div className="flex flex-col flex-1 p-6" style={{ background: '#0a0e1a' }}>
+    <div className="flex flex-col flex-1 p-4 md:p-6" style={{ background: '#0a0e1a' }}>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
+      <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 flex-wrap">
         <div>
           <h2 className="text-xl font-black tracking-widest uppercase" style={{ color: '#d4af37' }}>
             Goals & Milestones
@@ -510,7 +510,7 @@ export function GoalsPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 md:mb-6">
         {([
           { label: 'Total', value: goals.length, color: '#d4af37' },
           { label: 'In Progress', value: goals.filter(g=>g.status==='in-progress').length, color: '#60a5fa' },

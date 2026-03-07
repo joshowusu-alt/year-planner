@@ -77,3 +77,21 @@ body {
   body { background: white; color: black; }
   .print-table { page-break-inside: avoid; }
 }
+
+/* Safe area for devices with home bar / notch */
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
+}
+
+/* Touch optimised: minimum 44px tap targets on mobile */
+@media (max-width: 767px) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Override for inline chip-like buttons that must stay compact */
+  .compact-tap {
+    min-height: auto;
+    min-width: auto;
+  }
+}
