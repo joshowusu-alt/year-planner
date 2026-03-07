@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-950: #0a0e1a;
+  --color-navy-900: #0d1224;
+  --color-navy-800: #111827;
+  --color-navy-700: #1e2d40;
+  --color-navy-600: #243447;
+  --color-gold-400: #d4af37;
+  --color-gold-500: #b8962e;
+  --color-gold-300: #e0c55a;
+  --color-perez: #fde047;
+  --color-bsg: #0d9488;
+  --color-sunday: #ef4444;
+  --font-family-sans: 'Inter', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-navy-950);
+  color: #e2e8f0;
+  font-family: var(--font-family-sans);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #111827;
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* Category colour helpers */
+.event-perez {
+  background-color: #fde047;
+  color: #1a1a00;
+  font-weight: 600;
+}
+.event-bsg {
+  color: #5eead4;
+  font-weight: 600;
+}
+.event-sons {
+  color: #e2e8f0;
+}
+.event-ph {
+  color: #f97316;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.event-sunday {
+  color: #ef4444 !important;
+}
+
+/* Print / PDF styles */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; color: black; }
+  .print-table { page-break-inside: avoid; }
+}
