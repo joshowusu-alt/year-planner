@@ -25,10 +25,13 @@ export function LoginPage() {
             className="text-3xl font-black tracking-widest uppercase"
             style={{ color: '#d4af37' }}
           >
-            Year Planner
+            STRATUM
           </div>
           <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Executive Forward Planner
+            Executive Planning System
+          </p>
+          <p className="text-xs text-slate-500 italic pt-1">
+            Plan your year in layers: vision → strategy → execution.
           </p>
         </div>
 
@@ -40,7 +43,7 @@ export function LoginPage() {
         <div className="text-center space-y-1">
           <h1 className="text-lg font-bold text-white">Welcome back</h1>
           <p className="text-sm text-slate-400">
-            Sign in to access your year planner
+            Sign in to access your planning system
           </p>
         </div>
 

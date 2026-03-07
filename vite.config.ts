@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png', 'og-image.png', 'icon-512.png'],
       manifest: {
-        name: 'Year Planner — Executive Forward Planner',
-        short_name: 'Year Planner',
+        name: 'STRATUM — Executive Planning System',
+        short_name: 'STRATUM',
         description: 'Plan your year, track goals, manage tasks and notes.',
         theme_color: '#0a0e1a',
         background_color: '#0a0e1a',

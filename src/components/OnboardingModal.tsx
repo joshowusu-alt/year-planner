@@ -75,7 +75,7 @@ export function OnboardingModal({ onComplete }: Props) {
                   Welcome
                 </div>
                 <p className="text-slate-400 text-sm leading-relaxed">
-                  Your Year Planner is ready. Let's take 60 seconds to personalise it for you.
+                  Your STRATUM workspace is ready. Let's take 60 seconds to personalise it for you.
                 </p>
               </div>
               <ul className="text-left space-y-2 text-sm text-slate-300">
@@ -131,7 +131,7 @@ export function OnboardingModal({ onComplete }: Props) {
                   <input
                     value={plannerTitle}
                     onChange={(e) => setPlannerTitle(e.target.value)}
-                    placeholder="e.g. Executive Forward Planner 2026"
+                    placeholder="e.g. STRATUM Executive Planning 2026"
                     className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
                     style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
                   />

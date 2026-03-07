@@ -14,7 +14,7 @@ export function Sidebar({ page, onNavigate }: Props) {
   const { user, signOut, isConfigured } = useAuth()
 
   const mainItems: { id: Page; label: string; icon: React.ElementType }[] = [
-    { id: 'planner',  label: 'Year Planner', icon: CalendarDays },
+    { id: 'planner',  label: 'Annual View', icon: CalendarDays },
     { id: 'monthly',  label: 'Monthly View', icon: CalendarRange },
     { id: 'weekly',   label: 'Weekly View',  icon: Calendar },
     { id: 'goals',    label: 'Goals',        icon: Target },
@@ -54,7 +54,7 @@ export function Sidebar({ page, onNavigate }: Props) {
           </div>
         )}
         <p className="text-xs text-slate-500 leading-tight uppercase tracking-wider">
-          {store.plannerTitle || 'Forward Planner'}
+          {store.plannerTitle || 'Executive Planning System'}
         </p>
       </div>
 
