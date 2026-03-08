@@ -90,7 +90,7 @@ function MonthColumn({
   })
 
   return (
-    <div className="flex-1 w-full md:w-auto min-w-0">
+    <div className="flex-1 w-full min-w-0 overflow-x-hidden">
       {/* Month header */}
       <div
         className="text-center font-black tracking-widest uppercase py-2 text-xs md:text-sm"
@@ -126,13 +126,13 @@ function MonthColumn({
         return (
           <div
             key={dayNum}
-            className={`flex border-b border-white/5 min-h-7 hover:bg-white/5 group transition-colors ${
+            className={`flex border-b border-white/5 min-h-6 md:min-h-7 hover:bg-white/5 group transition-colors ${
               sunday ? 'bg-red-950/20' : ''
             }`}
           >
             {/* Day abbreviation */}
             <div
-              className={`w-10 shrink-0 flex items-center justify-center text-xs font-bold uppercase py-1 ${
+              className={`w-7 md:w-10 shrink-0 flex items-center justify-center text-xs font-bold uppercase py-0.5 md:py-1 compact-tap ${
                 sunday ? 'event-sunday' : 'text-slate-400'
               }`}
             >
@@ -141,7 +141,7 @@ function MonthColumn({
 
             {/* Date number */}
             <div
-              className={`w-6 shrink-0 flex items-center justify-center text-xs font-semibold py-1 ${
+              className={`w-5 md:w-6 shrink-0 flex items-center justify-center text-xs font-semibold py-0.5 md:py-1 compact-tap ${
                 sunday ? 'event-sunday' : 'text-slate-300'
               }`}
             >
@@ -149,19 +149,19 @@ function MonthColumn({
             </div>
 
             {/* Events */}
-            <div className="flex-1 flex flex-wrap items-center gap-1 py-1 px-1 min-w-0">
+            <div className="flex-1 flex flex-wrap items-center gap-0.5 md:gap-1 py-0.5 md:py-1 px-1 min-w-0 overflow-hidden">
               {events.map((ev) => (
                 <EventChip key={ev.id} event={ev} onEdit={onEditEvent} categories={categories} />
               ))}
             </div>
 
-            {/* Add button */}
+            {/* Add button — compact-tap to prevent global 44px from bloating rows */}
             <button
-              className="shrink-0 w-6 flex items-center justify-center opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity"
+              className="compact-tap shrink-0 w-5 md:w-6 flex items-center justify-center opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity"
               onClick={() => onAddEvent(dateStr)}
               title="Add event"
             >
-              <Plus size={12} style={{ color: '#d4af37' }} />
+              <Plus size={11} style={{ color: '#d4af37' }} />
             </button>
           </div>
         )
@@ -236,9 +236,9 @@ export function YearPlannerTable({ year, startMonth }: Props) {
         {MONTH_NAMES[startMonth + 1]}
       </div>
 
-      {/* 3-month grid — stacks vertically on mobile */}
+      {/* 3-month grid — stacks vertically on mobile, side-by-side on md+ */}
       <div
-        className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x rounded-lg overflow-hidden"
+        className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x rounded-lg overflow-hidden w-full max-w-full"
         style={{
           border: '1px solid #1e2d40',
           background: '#0d1224',

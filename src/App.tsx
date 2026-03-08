@@ -51,7 +51,7 @@ function AppShell() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: '#0a0e1a', color: '#e2e8f0' }}>
+    <div className="flex flex-col w-full max-w-full overflow-x-hidden md:flex-row" style={{ background: '#0a0e1a', color: '#e2e8f0', minHeight: '100%' }}>
       {/* Desktop / Tablet sidebar */}
       <div className="hidden md:block">
         <Sidebar page={page} onNavigate={setPage} />
@@ -65,7 +65,7 @@ function AppShell() {
         onNavigate={setPage}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
         {/* Mobile header */}
         {isMobile && (
           <MobileHeader
@@ -74,8 +74,8 @@ function AppShell() {
           />
         )}
 
-        {/* Main content — add bottom padding on mobile for bottom nav */}
-        <div className={isMobile ? 'pb-16' : ''}>
+        {/* Main content — bottom padding on mobile for bottom nav + safe area */}
+        <div className={isMobile ? 'pb-20 overflow-x-hidden' : ''}>
           {page === 'planner'  && <PlannerPage />}
           {page === 'monthly'  && <MonthlyCalendar />}
           {page === 'weekly'   && <WeeklyView />}

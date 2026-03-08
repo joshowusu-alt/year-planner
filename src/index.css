@@ -24,13 +24,21 @@ body {
   background-color: var(--color-navy-950);
   color: #e2e8f0;
   font-family: var(--font-family-sans);
-  min-height: 100vh;
+  /* Do NOT use 100vh — causes stale layout after rotation on iOS */
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+html {
+  height: 100%;
+  overflow-x: hidden;
 }
 
 #root {
-  min-height: 100vh;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 /* Scrollbar styling */
@@ -83,13 +91,25 @@ body {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
 }
 
-/* Touch optimised: minimum 44px tap targets on mobile */
+/* Mobile layout: prevent any overflow and stale sizing */
 @media (max-width: 767px) {
+  html, body, #root {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Prevent any element from exceeding viewport width */
+  * {
+    max-width: 100%;
+  }
+
+  /* Touch optimised: minimum 44px tap targets */
   button, a, [role="button"] {
     min-height: 44px;
     min-width: 44px;
   }
-  /* Override for inline chip-like buttons that must stay compact */
+  /* Override for inline chip-like buttons */
   .compact-tap {
     min-height: auto;
     min-width: auto;

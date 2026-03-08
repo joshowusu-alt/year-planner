@@ -27,14 +27,14 @@ export function PlannerPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-screen" style={{ background: '#0a0e1a' }}>
+    <div className="flex flex-col flex-1 w-full max-w-full overflow-x-hidden" style={{ background: '#0a0e1a' }}>
       <TopBar
         year={currentYear}
         onAddEvent={() => setAddModal(true)}
         onPrint={handlePrint}
       />
 
-      <main ref={printRef} className="flex-1 p-4 sm:p-6 space-y-6 print-table">
+      <main ref={printRef} className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 print-table overflow-x-hidden">
         {/* Print header (only visible when printing) */}
         <div
           className="hidden print:block text-center mb-4 font-black tracking-widest uppercase text-lg"
