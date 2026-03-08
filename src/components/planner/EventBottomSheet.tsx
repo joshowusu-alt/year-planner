@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
-import { X, Plus, Pencil, Trash2 } from 'lucide-react'
+import { X, Plus, Pencil, Trash2, RotateCcw } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import type { PlannerEvent } from '../../types'
-import { getCategoryStyle } from '../../types'
+import { getCategoryStyle, getBaseEventId } from '../../types'
 
 interface Props {
   date: string | null           // yyyy-MM-dd or null to close
@@ -13,9 +13,10 @@ interface Props {
 }
 
 export function EventBottomSheet({ date, onClose, onAddEvent, onEditEvent }: Props) {
-  const { getEventsForDate, removeEvent, store } = usePlanner()
+  const { getEventsForDate, removeEvent, removeEventOccurrence, store } = usePlanner()
   const [visible, setVisible] = useState(false)
   const sheetRef = useRef<HTMLDivElement>(null)
+  const [scopeEvent, setScopeEvent] = useState<PlannerEvent | null>(null)
 
   // Animate in
   useEffect(() => {
@@ -112,7 +113,10 @@ export function EventBottomSheet({ date, onClose, onAddEvent, onEditEvent }: Pro
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm(`Delete "${ev.title}"?`)) {
+                      const isRecurring = ev.id.includes('__')
+                      if (isRecurring) {
+                        setScopeEvent(ev)
+                      } else if (confirm(`Delete "${ev.title}"?`)) {
                         removeEvent(ev.id)
                       }
                     }}
@@ -125,6 +129,46 @@ export function EventBottomSheet({ date, onClose, onAddEvent, onEditEvent }: Pro
             })
           )}
         </div>
+
+        {/* Recurring delete scope picker */}
+        {scopeEvent && (
+          <div className="px-5 py-4 shrink-0" style={{ borderTop: '2px solid #d4af37', background: '#0d1224' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <RotateCcw size={13} style={{ color: '#d4af37' }} />
+              <p className="text-xs font-bold text-slate-300">
+                Delete <span style={{ color: '#d4af37' }}>"{scopeEvent.title}"</span>?
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  removeEventOccurrence(getBaseEventId(scopeEvent.id), scopeEvent.date)
+                  setScopeEvent(null)
+                }}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold"
+                style={{ background: '#7f1d1d', color: '#fca5a5', border: '1px solid #991b1b' }}
+              >
+                Skip this date only
+              </button>
+              <button
+                onClick={() => {
+                  removeEvent(scopeEvent.id)
+                  setScopeEvent(null)
+                }}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold"
+                style={{ background: '#450a0a', color: '#f87171', border: '1px solid #7f1d1d' }}
+              >
+                Delete all occurrences
+              </button>
+            </div>
+            <button
+              onClick={() => setScopeEvent(null)}
+              className="w-full mt-2 py-2 text-xs text-slate-500"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
 
         {/* Add event button */}
         <div className="px-5 py-4 safe-bottom" style={{ borderTop: '1px solid #1e2d40' }}>

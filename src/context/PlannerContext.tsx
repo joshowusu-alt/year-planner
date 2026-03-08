@@ -214,8 +214,9 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     return store.events
       .filter((ev) => isRecurringOnDate(ev, dateStr))
       .map((ev) => {
-        const isVirtualOccurrence = ev.recurrence?.type && ev.recurrence.type !== 'none' && ev.date !== dateStr
-        if (!isVirtualOccurrence) return ev
+        // Mark EVERY occurrence of a recurring event as virtual (including the
+        // base date) so the scope toggle always shows when editing.
+        if (!ev.recurrence?.type || ev.recurrence.type === 'none') return ev
         const override = ev.instanceOverrides?.[dateStr]
         return { ...ev, ...(override ?? {}), id: `${ev.id}__${dateStr}`, date: dateStr }
       })
