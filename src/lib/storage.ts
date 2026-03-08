@@ -295,6 +295,11 @@ export function removeCategory(store: PlannerStore, id: string): PlannerStore {
   return { ...store, categories: store.categories.filter((c) => c.id !== id) }
 }
 
+/** Restore built-in defaults, preserving their original static IDs so existing events resolve correctly. */
+export function resetCategories(store: PlannerStore): PlannerStore {
+  return { ...store, categories: DEFAULT_CATEGORIES }
+}
+
 // ─── VitalFew CRUD ─────────────────────────────────────────────────────────────
 
 export function createVitalFew(

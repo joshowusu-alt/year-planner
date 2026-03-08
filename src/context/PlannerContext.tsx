@@ -47,6 +47,7 @@ import {
   addCategory as storageAddCategory,
   updateCategory as storageUpdateCategory,
   removeCategory as storageRemoveCategory,
+  resetCategories as storageResetCategories,
   createVitalFew,
   updateVitalFew,
   deleteVitalFew,
@@ -87,6 +88,7 @@ interface PlannerContextValue {
   addCategory: (cat: Omit<EventCategoryDef, 'id'>) => void
   updateCategory: (id: string, patch: Partial<EventCategoryDef>) => void
   removeCategory: (id: string) => void
+  resetCategories: () => void
   // Vital Few
   addVitalFew: (item: Omit<VitalFew, 'id' | 'createdAt' | 'updatedAt'>) => void
   editVitalFew: (id: string, patch: Partial<VitalFew>) => void
@@ -284,6 +286,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setStore((s) => storageRemoveCategory(s, id))
   }, [])
 
+  const resetCategories = useCallback(() => {
+    setStore((s) => storageResetCategories(s))
+  }, [])
+
   // ── Vital Few ──
   const addVitalFew = useCallback((item: Omit<VitalFew, 'id' | 'createdAt' | 'updatedAt'>) => {
     setStore((s) => createVitalFew(s, item))
@@ -315,7 +321,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       addTask, editTask, removeTask, toggleTask,
       addNote, editNote, removeNote,
       updateSettings,
-      addCategory, updateCategory, removeCategory,
+      addCategory, updateCategory, removeCategory, resetCategories,
       addVitalFew, editVitalFew, removeVitalFew,
       addWeeklyReview, editWeeklyReview,
       currentYear, setCurrentYear,
