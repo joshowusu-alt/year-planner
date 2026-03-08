@@ -27,7 +27,7 @@ export function PlannerPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 w-full max-w-full overflow-x-hidden" style={{ background: '#0a0e1a' }}>
+    <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden" style={{ background: '#0a0e1a' }}>
       <TopBar
         year={currentYear}
         onAddEvent={() => setAddModal(true)}

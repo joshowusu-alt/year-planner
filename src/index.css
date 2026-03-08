@@ -24,8 +24,8 @@ body {
   background-color: var(--color-navy-950);
   color: #e2e8f0;
   font-family: var(--font-family-sans);
-  /* Do NOT use 100vh — causes stale layout after rotation on iOS */
-  min-height: 100%;
+  /* Use height (not 100vh) — avoids stale layout after rotation on iOS */
+  height: 100%;
   overflow-x: hidden;
 }
 
@@ -35,7 +35,7 @@ html {
 }
 
 #root {
-  min-height: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
