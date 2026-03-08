@@ -114,4 +114,13 @@ html {
     min-height: auto;
     min-width: auto;
   }
+
+  /* Prevent iOS Safari from auto-zooming when an input is focused.
+     Safari zooms whenever the focused input font-size is < 16px.
+     max(16px, 1em) keeps visual size intact for larger contexts. */
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
 }
