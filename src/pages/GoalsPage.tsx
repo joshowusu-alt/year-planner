@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, Flag } from 'lucide-react'
+import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, Flag, X } from 'lucide-react'
 import { usePlanner } from '../context/PlannerContext'
 import type { Goal, Milestone, PriorityLevel, GoalStatus } from '../types'
 import { PRIORITY_COLORS, PRIORITY_LABELS, GOAL_STATUS_LABELS } from '../types'
@@ -74,17 +74,25 @@ function GoalModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full max-w-md rounded-xl shadow-2xl p-6 space-y-4"
-        style={{ background: '#111827', border: '1px solid #1e2d40' }}
+        className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
+        style={{ background: '#111827', border: '1px solid #1e2d40', maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)' }}
       >
-        <h2 className="text-lg font-bold" style={{ color: '#d4af37' }}>
-          {initial?.title ? 'Edit Goal' : 'New Goal'}
-        </h2>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid #1e2d40' }}>
+          <h2 className="text-lg font-bold" style={{ color: '#d4af37' }}>
+            {initial?.title ? 'Edit Goal' : 'New Goal'}
+          </h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+            <X size={18} className="text-slate-400" />
+          </button>
+        </div>
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 p-6 space-y-4">
 
         <input
           value={form.title}
@@ -169,7 +177,12 @@ function GoalModal({
           />
         </div>
 
-        <div className="flex gap-2 justify-end pt-2">
+        </div>
+        {/* Sticky footer */}
+        <div
+          className="shrink-0 flex gap-2 justify-end px-6 py-4"
+          style={{ borderTop: '1px solid #1e2d40', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
           <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:bg-white/5 rounded-lg">Cancel</button>
           <button
             onClick={() => { if (form.title.trim()) { onSave(form); onClose() }}}

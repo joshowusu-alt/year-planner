@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Pin, Search, Tag, FileText, ChevronDown } from 'lucide-react'
+import { Plus, Trash2, Pin, Search, Tag, FileText, ChevronDown, X } from 'lucide-react'
 import { format } from 'date-fns'
 import { usePlanner } from '../context/PlannerContext'
 import type { Note, NotePeriod, PriorityLevel } from '../types'
@@ -26,29 +26,36 @@ function NoteModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full max-w-lg rounded-xl shadow-2xl p-6 space-y-4"
-        style={{ background: '#111827', border: '1px solid #1e2d40' }}
+        className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
+        style={{ background: '#111827', border: '1px solid #1e2d40', maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)' }}
       >
-        <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid #1e2d40' }}>
           <h2 className="font-bold text-lg" style={{ color: '#d4af37' }}>
             {initial?.id ? 'Edit Note' : 'New Note'}
           </h2>
-          <button
-            onClick={() => setPinned(!pinned)}
-            className={`p-2 rounded-lg text-sm flex items-center gap-1.5 ${
-              pinned ? 'bg-yellow-500/20 text-yellow-400' : 'text-slate-500 hover:bg-white/5'
-            }`}
-          >
-            <Pin size={14} />
-            {pinned ? 'Pinned' : 'Pin'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPinned(!pinned)}
+              className={`p-2 rounded-lg text-sm flex items-center gap-1.5 ${
+                pinned ? 'bg-yellow-500/20 text-yellow-400' : 'text-slate-500 hover:bg-white/5'
+              }`}
+            >
+              <Pin size={14} />
+              {pinned ? 'Pinned' : 'Pin'}
+            </button>
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+              <X size={18} className="text-slate-400" />
+            </button>
+          </div>
         </div>
-
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 p-6 space-y-4">
         <input
           autoFocus
           value={title}
@@ -62,7 +69,7 @@ function NoteModal({
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Write your note here..."
-          rows={7}
+          rows={4}
           className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
           style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0', lineHeight: '1.6' }}
         />
@@ -109,7 +116,12 @@ function NoteModal({
           />
         </div>
 
-        <div className="flex gap-2 justify-end pt-1">
+        </div>
+        {/* Sticky footer */}
+        <div
+          className="shrink-0 flex gap-2 justify-end px-6 py-4"
+          style={{ borderTop: '1px solid #1e2d40', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
           <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:bg-white/5 rounded-lg">Cancel</button>
           <button
             onClick={() => {

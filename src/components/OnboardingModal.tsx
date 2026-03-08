@@ -51,12 +51,12 @@ export function OnboardingModal({ onComplete }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
     >
       <div
-        className="relative w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
-        style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
+        className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col"
+        style={{ background: '#0d1224', border: '1px solid #1e2d40', maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)' }}
       >
         {/* Progress bar */}
         <div className="h-1 w-full" style={{ background: '#1e2d40' }}>
@@ -66,7 +66,7 @@ export function OnboardingModal({ onComplete }: Props) {
           />
         </div>
 
-        <div className="p-8">
+        <div className="overflow-y-auto flex-1 p-5 sm:p-8">
           {/* ── Step: Welcome ── */}
           {step === 'welcome' && (
             <div className="space-y-6 text-center">
@@ -265,7 +265,7 @@ export function OnboardingModal({ onComplete }: Props) {
         </div>
 
         {/* Step indicator dots */}
-        <div className="flex justify-center gap-1.5 pb-4">
+        <div className="shrink-0 flex justify-center gap-1.5 py-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           {STEPS.map((s) => (
             <div
               key={s}

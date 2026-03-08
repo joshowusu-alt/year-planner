@@ -105,9 +105,9 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
           </button>
         </div>
 
-        {/* Form — scrollable body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
-        <div className="p-6 space-y-5">
+        {/* Form — scrollable fields + sticky footer */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        <div className="overflow-y-auto flex-1 p-6 space-y-5">
           {/* Date */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
@@ -272,36 +272,39 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-1">
-            {isEdit && onDelete && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors hover:bg-red-900/40"
-                style={{ color: '#f87171', border: '1px solid #991b1b' }}
-              >
-                <Trash2 size={14} />
-                Delete
-              </button>
-            )}
-            <div className="flex-1" />
+        </div>
+        {/* Sticky action footer — outside scroll area, respects safe-area-inset-bottom */}
+        <div
+          className="shrink-0 flex gap-3 px-6 py-4"
+          style={{ borderTop: '1px solid #1e2d40', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
+          {isEdit && onDelete && (
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:bg-white/5 transition-colors"
+              onClick={handleDelete}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors hover:bg-red-900/40"
+              style={{ color: '#f87171', border: '1px solid #991b1b' }}
             >
-              Cancel
+              <Trash2 size={14} />
+              Delete
             </button>
-            <button
-              type="submit"
-              className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-colors"
-              style={{ background: '#d4af37', color: '#111827' }}
-            >
-              <Save size={14} />
-              {isEdit ? 'Update' : 'Add Event'}
-            </button>
-          </div>
+          )}
+          <div className="flex-1" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:bg-white/5 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-colors"
+            style={{ background: '#d4af37', color: '#111827' }}
+          >
+            <Save size={14} />
+            {isEdit ? 'Update' : 'Add Event'}
+          </button>
         </div>
         </form>
       </div>
