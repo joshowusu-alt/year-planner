@@ -1,5 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#0a0e1a"/>
-  <text x="256" y="340" text-anchor="middle" font-family="Georgia,serif" font-weight="bold" font-size="260" fill="#d4af37">Y</text>
-  <rect x="88" y="370" width="336" height="12" rx="6" fill="#d4af37" opacity="0.6"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="110" ry="110" fill="#0a0e1a"/>
+
+  <!-- Gold "Y" letter — bold serif, upper portion -->
+  <text
+    x="256"
+    y="240"
+    text-anchor="middle"
+    dominant-baseline="alphabetic"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="200"
+    font-weight="900"
+    fill="#d4af37"
+  >Y</text>
+
+  <!-- Three downward-opening chevron stripes (military rank insignia) -->
+  <!-- Stripe 1 (top) -->
+  <polyline
+    points="148,295 256,350 364,295"
+    fill="none" stroke="#d4af37" stroke-width="21"
+    stroke-linecap="round" stroke-linejoin="round"
+  />
+  <!-- Stripe 2 (middle) -->
+  <polyline
+    points="148,332 256,387 364,332"
+    fill="none" stroke="#d4af37" stroke-width="21"
+    stroke-linecap="round" stroke-linejoin="round"
+  />
+  <!-- Stripe 3 (bottom) -->
+  <polyline
+    points="148,369 256,424 364,369"
+    fill="none" stroke="#d4af37" stroke-width="21"
+    stroke-linecap="round" stroke-linejoin="round"
+  />
 </svg>

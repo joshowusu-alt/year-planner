@@ -43,7 +43,10 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
       className={`min-h-16 md:min-h-24 p-1 md:p-1.5 flex flex-col border-b border-r group cursor-pointer transition-colors hover:bg-white/5 ${
         !isCurrentMonth ? 'opacity-30' : ''
       }`}
-      style={{ borderColor: '#1e2d40' }}
+      style={{
+        borderColor: '#1e2d40',
+        ...(today ? { borderTop: '2px solid #d4af37' } : {}),
+      }}
       onClick={() => onAddEvent(format(date, 'yyyy-MM-dd'))}
     >
       {/* Date number */}

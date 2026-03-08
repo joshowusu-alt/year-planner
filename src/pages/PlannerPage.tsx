@@ -1,15 +1,15 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { usePlanner } from '../context/PlannerContext'
+import { AnnualView } from '../components/planner/AnnualView'
 import { YearPlannerTable } from '../components/planner/YearPlannerTable'
 import { TopBar } from '../components/layout/TopBar'
 import { EventModal } from '../components/planner/EventModal'
 import type { EventCategory } from '../types'
 
-const QUARTERS = [1, 4, 7, 10] // starting months of each quarter
+const QUARTERS = [1, 4, 7, 10]
 
 export function PlannerPage() {
   const { store, addEvent, currentYear } = usePlanner()
-  const printRef = useRef<HTMLDivElement>(null)
   const [addModal, setAddModal] = useState(false)
 
   function handlePrint() {
@@ -34,21 +34,25 @@ export function PlannerPage() {
         onPrint={handlePrint}
       />
 
-      <main ref={printRef} className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 print-table overflow-x-hidden">
-        {/* Print header (only visible when printing) */}
+      {/* Screen: 12-card scroll-snap annual view */}
+      <div className="flex-1 overflow-hidden no-print flex flex-col">
+        <AnnualView />
+      </div>
+
+      {/* Print-only: classic quarterly layout */}
+      <div className="hidden print:block p-6 space-y-6 print-table">
         <div
-          className="hidden print:block text-center mb-4 font-black tracking-widest uppercase text-lg"
+          className="text-center mb-4 font-black tracking-widest uppercase text-lg"
           style={{ color: '#000' }}
         >
           {store.organizationName} – {store.plannerTitle} – JANUARY TO DECEMBER {currentYear}
         </div>
-
         {QUARTERS.map((startMonth) => (
           <YearPlannerTable key={startMonth} year={currentYear} startMonth={startMonth} />
         ))}
-      </main>
+      </div>
 
-      {/* Quick Add Modal (no pre-selected date) */}
+      {/* Quick Add Modal */}
       {addModal && (
         <EventModal
           onSave={handleQuickAdd}

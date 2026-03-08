@@ -116,7 +116,7 @@ export function WeeklyView() {
           className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors hover:bg-white/5"
           style={{ color: '#94a3b8', border: '1px solid #243447' }}
         >
-          This Week
+          ↩ Today
         </button>
 
         <div className="flex-1" />
@@ -150,11 +150,14 @@ export function WeeklyView() {
               <div
                 key={dateStr}
                 className={isMobile
-                  ? 'rounded-xl p-3'
+                  ? 'rounded-xl p-2'
                   : 'flex flex-col border-r'
                 }
                 style={isMobile
-                  ? { background: today ? '#0d1a2e' : '#0d1224', border: '1px solid #1e2d40' }
+                  ? {
+                      background: today ? '#0d1a2e' : '#0d1224',
+                      border: today ? '1px solid #d4af37' : '1px solid #1e2d40',
+                    }
                   : { borderColor: '#1e2d40', background: today ? '#0d1a2e' : 'transparent' }
                 }
                 onDragOver={(e) => e.preventDefault()}
@@ -163,7 +166,7 @@ export function WeeklyView() {
                 {/* Day header */}
                 <div
                   className={isMobile
-                    ? 'flex items-center gap-3 pb-2 mb-2 border-b'
+                    ? 'flex items-center gap-2 pb-1.5 mb-1.5 border-b'
                     : 'flex flex-col items-center py-3 border-b sticky top-0'
                   }
                   style={{ borderColor: '#1e2d40', background: isMobile ? 'transparent' : (today ? '#0d1a2e' : '#0a0e1a') }}
@@ -173,26 +176,56 @@ export function WeeklyView() {
                   >
                     {format(date, 'EEE')}
                   </span>
-                  <span
-                    className={`text-lg font-black mt-0.5 w-9 h-9 flex items-center justify-center rounded-full ${
-                      today ? 'bg-yellow-400 text-black' : sunday ? 'text-red-400' : 'text-slate-200'
-                    }`}
-                  >
-                    {format(date, 'd')}
-                  </span>
-                  {isMobile && (
-                    <span className="flex-1 text-xs text-slate-400">
-                      {events.length} event{events.length !== 1 ? 's' : ''}, {tasks.length} task{tasks.length !== 1 ? 's' : ''}
+                  {isMobile ? (
+                    // Mobile: compact date number inline
+                    <span
+                      className={`text-sm font-black w-6 h-6 flex items-center justify-center rounded-full shrink-0 ${
+                        today ? 'text-black' : sunday ? 'text-red-400' : 'text-slate-200'
+                      }`}
+                      style={today ? { background: '#d4af37' } : {}}
+                    >
+                      {format(date, 'd')}
+                    </span>
+                  ) : (
+                    <span
+                      className={`text-lg font-black mt-0.5 w-9 h-9 flex items-center justify-center rounded-full ${
+                        today ? 'bg-yellow-400 text-black' : sunday ? 'text-red-400' : 'text-slate-200'
+                      }`}
+                    >
+                      {format(date, 'd')}
+                    </span>
+                  )}
+                  {today && (
+                    <span
+                      className="text-xs font-black uppercase tracking-wider"
+                      style={{ color: '#d4af37' }}
+                    >
+                      Today
+                    </span>
+                  )}
+                  {isMobile && !today && (
+                    <span className="flex-1 text-xs text-slate-600">
+                      {events.length > 0 && `${events.length}e`}{tasks.length > 0 && ` ${tasks.length}t`}
                     </span>
                   )}
                 </div>
 
                 {/* Content */}
-                <div className={isMobile ? 'space-y-1.5' : 'flex-1 p-2 space-y-1.5 overflow-y-auto'}>
+                <div className={isMobile ? 'space-y-1' : 'flex-1 p-2 space-y-1.5 overflow-y-auto'}>
                   {/* Events */}
                   {events.map((ev) => {
                     const catStyle = getCategoryStyle(ev.category, store.categories)
-                    return (
+                    return isMobile ? (
+                      // Mobile: compact chip style
+                      <span
+                        key={ev.id}
+                        className="inline-flex items-center gap-1 text-xs leading-tight cursor-pointer rounded px-1.5 py-0.5 mr-1"
+                        style={{ color: catStyle.color, background: catStyle.bgColor }}
+                        onClick={() => { setEditingEvent(ev); setModalDate(null) }}
+                      >
+                        {ev.title}
+                      </span>
+                    ) : (
                       <div
                         key={ev.id}
                         draggable
@@ -205,10 +238,7 @@ export function WeeklyView() {
                         onClick={() => { setEditingEvent(ev); setModalDate(null) }}
                       >
                         <GripVertical size={10} className="text-slate-600 mt-0.5 shrink-0" />
-                        <span
-                          className="text-xs font-semibold leading-tight"
-                          style={{ color: catStyle.color }}
-                        >
+                        <span className="text-xs font-semibold leading-tight" style={{ color: catStyle.color }}>
                           {ev.title}
                         </span>
                       </div>

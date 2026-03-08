@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react'
-import { X, Trash2, Save, RotateCcw } from 'lucide-react'
+import { useState, useMemo, type FormEvent } from 'react'
+import { X, Trash2, Save, RotateCcw, ChevronDown } from 'lucide-react'
 import type { PlannerEvent, RecurrenceRule, RecurrenceType } from '../../types'
 import { RECURRENCE_LABELS } from '../../types'
 import { usePlanner } from '../../context/PlannerContext'
@@ -36,9 +36,23 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
     event?.recurrence?.type ?? 'none'
   )
   const [recurrenceUntil, setRecurrenceUntil] = useState(event?.recurrence?.until ?? '')
+  const [showAllCategories, setShowAllCategories] = useState(false)
 
   // If editing a virtual occurrence, show the base id for context
   const isVirtual = Boolean(event && event.id.includes('__'))
+
+  // Sort categories by event usage frequency (most used first)
+  const sortedCategories = useMemo(() => {
+    const counts: Record<string, number> = {}
+    store.events.forEach((ev) => {
+      counts[ev.category] = (counts[ev.category] ?? 0) + 1
+    })
+    return [...categories].sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0))
+  }, [categories, store.events])
+
+  const TOP_N = 4
+  const visibleCategories = showAllCategories ? sortedCategories : sortedCategories.slice(0, TOP_N)
+  const hasMore = sortedCategories.length > TOP_N
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -61,18 +75,23 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
   }
 
   return (
+    /* Backdrop — bottom-sheet on mobile, centered on sm+ */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full max-w-md rounded-xl shadow-2xl"
-        style={{ background: '#111827', border: '1px solid #1e2d40' }}
+        className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
+        style={{
+          background: '#111827',
+          border: '1px solid #1e2d40',
+          maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)',
+        }}
       >
-        {/* Header */}
+        {/* Header — sticky */}
         <div
-          className="flex items-center justify-between px-6 py-4 rounded-t-xl"
+          className="flex items-center justify-between px-6 py-4 rounded-t-2xl sm:rounded-t-xl shrink-0"
           style={{ borderBottom: '1px solid #1e2d40' }}
         >
           <h2 className="text-lg font-bold tracking-wide" style={{ color: '#d4af37' }}>
@@ -86,8 +105,9 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        {/* Form — scrollable body */}
+        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
+        <div className="p-6 space-y-5">
           {/* Date */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
@@ -133,31 +153,47 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
             <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
               Category
             </label>
-            {categories.length === 0 ? (
+            {sortedCategories.length === 0 ? (
               <p className="text-xs text-slate-500 italic">No categories yet — add some in Settings.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {categories.map((cat) => {
-                  const active = category === cat.id
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setCategory(cat.id)}
-                      className="px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all"
-                      style={{
-                        background: active ? cat.bgColor : 'transparent',
-                        color: cat.color,
-                        border: `1px solid ${active ? cat.color : '#243447'}`,
-                        outline: active ? `2px solid ${cat.color}` : 'none',
-                        outlineOffset: '2px',
-                      }}
-                    >
-                      {cat.label}
-                    </button>
-                  )
-                })}
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {visibleCategories.map((cat) => {
+                    const active = category === cat.id
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setCategory(cat.id)}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all"
+                        style={{
+                          background: active ? cat.bgColor : 'transparent',
+                          color: cat.color,
+                          border: `1px solid ${active ? cat.color : '#243447'}`,
+                          outline: active ? `2px solid ${cat.color}` : 'none',
+                          outlineOffset: '2px',
+                        }}
+                      >
+                        {cat.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                {hasMore && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllCategories((v) => !v)}
+                    className="mt-2 flex items-center gap-1 text-xs text-slate-500 hover:text-slate-400 transition-colors"
+                  >
+                    <ChevronDown
+                      size={12}
+                      className="transition-transform"
+                      style={{ transform: showAllCategories ? 'rotate(180deg)' : 'none' }}
+                    />
+                    {showAllCategories ? 'Show less' : `Show all ${sortedCategories.length} categories`}
+                  </button>
+                )}
+              </>
             )}
           </div>
 
@@ -266,6 +302,7 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
               {isEdit ? 'Update' : 'Add Event'}
             </button>
           </div>
+        </div>
         </form>
       </div>
     </div>

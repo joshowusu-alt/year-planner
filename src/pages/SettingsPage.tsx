@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ChangeEvent } from 'react'
 import { Save, Upload, Plus, Trash2, Pencil, X, RotateCcw } from 'lucide-react'
 import { usePlanner } from '../context/PlannerContext'
 import type { EventCategoryDef } from '../types'
+import { DEFAULT_CATEGORIES } from '../types'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured, uploadLogoToStorage } from '../lib/supabase'
@@ -194,11 +195,29 @@ export function SettingsPage() {
           </div>
         </section>
 
-        {/* Categories */}
+        {/* Event Categories */}
         <section>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">
-            Event Categories
-          </h3>
+          {/* Header + Restore Defaults */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
+              Event Categories
+            </h3>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('Reset to default categories? Your current categories will be replaced.')) {
+                  // Remove all existing, add defaults
+                  const existing = [...store.categories]
+                  existing.forEach((c) => removeCategory(c.id))
+                  DEFAULT_CATEGORIES.forEach((c) => addCategory({ label: c.label, color: c.color, bgColor: c.bgColor }))
+                }
+              }}
+              className="text-xs font-semibold px-2 py-1 rounded-lg hover:bg-white/5 transition-colors"
+              style={{ color: '#94a3b8', border: '1px solid #243447' }}
+            >
+              Restore Defaults
+            </button>
+          </div>
           <div className="space-y-2 mb-4">
             {store.categories.map((cat) => (
               <div key={cat.id} className="flex items-center gap-2 group">
@@ -225,7 +244,9 @@ export function SettingsPage() {
                     <button
                       type="button"
                       onClick={() => { if (confirm(`Delete "${cat.label}"?`)) removeCategory(cat.id) }}
-                      className="opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity p-1 rounded"
+                      className="opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity p-1 rounded disabled:opacity-20 disabled:cursor-not-allowed"
+                      disabled={store.categories.length <= 1}
+                      title={store.categories.length <= 1 ? 'Cannot delete the last category' : `Delete ${cat.label}`}
                     >
                       <Trash2 size={12} className="text-red-400" />
                     </button>
