@@ -143,11 +143,11 @@ export function MonthlyCalendar() {
     return store.notes.filter((n) => n.periodType === 'day' && n.periodRef === key).length
   }
 
-  function handleSave(data: { date: string; title: string; category: string; notes?: string; recurrence?: RecurrenceRule }) {
+  function handleSave(data: { date: string; title: string; category: string; notes?: string; recurrence?: RecurrenceRule; startTime?: string; endTime?: string }) {
     if (editingEvent) {
       editEvent(editingEvent.id, data)
     } else {
-      addEvent(data.date, data.title, data.category, data.notes, data.recurrence)
+      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime)
     }
   }
 

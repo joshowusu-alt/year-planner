@@ -1,5 +1,5 @@
 import { useState, useMemo, type FormEvent } from 'react'
-import { X, Trash2, Save, RotateCcw, ChevronDown } from 'lucide-react'
+import { X, Trash2, Save, RotateCcw, ChevronDown, Clock } from 'lucide-react'
 import type { PlannerEvent, RecurrenceRule, RecurrenceType } from '../../types'
 import { RECURRENCE_LABELS, getBaseEventId } from '../../types'
 import { usePlanner } from '../../context/PlannerContext'
@@ -15,6 +15,8 @@ interface Props {
     category: string
     notes?: string
     recurrence?: RecurrenceRule
+    startTime?: string
+    endTime?: string
   }) => void
   onDelete?: (id: string) => void
   onClose: () => void
@@ -32,6 +34,9 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
     event?.category ?? (categories[0]?.id ?? '')
   )
   const [notes, setNotes] = useState(event?.notes ?? '')
+  const [startTime, setStartTime] = useState(event?.startTime ?? '')
+  const [endTime, setEndTime] = useState(event?.endTime ?? '')
+  const [showTime, setShowTime] = useState(Boolean(event?.startTime))
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(
     event?.recurrence?.type ?? 'none'
   )
@@ -66,6 +71,8 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
         title: title.trim(),
         category,
         notes: notes.trim() || undefined,
+        startTime: startTime || undefined,
+        endTime: endTime || undefined,
       })
       onClose()
       return
@@ -75,7 +82,7 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
       recurrenceType !== 'none'
         ? { type: recurrenceType, until: recurrenceUntil || undefined }
         : undefined
-    onSave({ date, title: title.trim(), category, notes: notes.trim() || undefined, recurrence })
+    onSave({ date, title: title.trim(), category, notes: notes.trim() || undefined, recurrence, startTime: startTime || undefined, endTime: endTime || undefined })
     onClose()
   }
 
@@ -267,6 +274,42 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
                 color: '#e2e8f0',
               }}
             />
+          </div>
+
+          {/* Time — optional */}
+          <div>
+            <button
+              type="button"
+              onClick={() => { setShowTime((v) => !v); if (showTime) { setStartTime(''); setEndTime('') } }}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-yellow-400 transition-colors uppercase tracking-wider mb-2"
+            >
+              <Clock size={11} />
+              {showTime ? 'Remove time' : 'Add time (optional)'}
+            </button>
+            {showTime && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Start</label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                    style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0', colorScheme: 'dark' }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">End</label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                    style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0', colorScheme: 'dark' }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Recurrence — hidden when editing a single instance */}

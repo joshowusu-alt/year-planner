@@ -62,10 +62,10 @@ import {
 interface PlannerContextValue {
   store: PlannerStore
   // Events
-  addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule) => void
+  addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string) => void
   editEvent: (id: string, patch: Partial<PlannerEvent>) => void
   removeEvent: (id: string) => void
-  editEventInstance: (baseId: string, dateStr: string, patch: { title?: string; category?: string; notes?: string }) => void
+  editEventInstance: (baseId: string, dateStr: string, patch: { title?: string; category?: string; notes?: string; startTime?: string; endTime?: string }) => void
   removeEventOccurrence: (baseId: string, dateStr: string) => void
   getEventsForDate: (dateStr: string) => PlannerEvent[]
   // Month themes
@@ -186,8 +186,8 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   }, [store, user?.id])
 
   // ── Events ──
-  const addEvent = useCallback((date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule) => {
-    setStore((s) => createEvent(s, { date, title, category, notes, recurrence }))
+  const addEvent = useCallback((date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string) => {
+    setStore((s) => createEvent(s, { date, title, category, notes, recurrence, startTime, endTime }))
   }, [])
 
   const editEvent = useCallback((id: string, patch: Partial<PlannerEvent>) => {
@@ -201,7 +201,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   const editEventInstance = useCallback((
     baseId: string,
     dateStr: string,
-    patch: { title?: string; category?: string; notes?: string }
+    patch: { title?: string; category?: string; notes?: string; startTime?: string; endTime?: string }
   ) => {
     setStore((s) => updateEventInstance(s, baseId, dateStr, patch))
   }, [])

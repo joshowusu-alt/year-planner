@@ -121,7 +121,7 @@ export function updateEventInstance(
   store: PlannerStore,
   baseId: string,
   dateStr: string,
-  patch: { title?: string; category?: string; notes?: string }
+  patch: { title?: string; category?: string; notes?: string; startTime?: string; endTime?: string }
 ): PlannerStore {
   return {
     ...store,

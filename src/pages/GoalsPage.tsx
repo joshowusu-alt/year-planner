@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, Flag, X } from 'lucide-react'
+import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, CheckSquare, Square, Flag, X } from 'lucide-react'
 import { usePlanner } from '../context/PlannerContext'
 import type { Goal, Milestone, PriorityLevel, GoalStatus } from '../types'
 import { PRIORITY_COLORS, PRIORITY_LABELS, GOAL_STATUS_LABELS } from '../types'
@@ -234,7 +234,9 @@ function MilestoneRow({
 // ─── Goal card ────────────────────────────────────────────────────────────────
 
 function GoalCard({ goal }: { goal: Goal }) {
-  const { editGoal, removeGoal, addMilestoneToGoal, editMilestone, removeMilestone } = usePlanner()
+  const { editGoal, removeGoal, addMilestoneToGoal, editMilestone, removeMilestone, store, toggleTask } = usePlanner()
+  const linkedTasks = store.tasks.filter((t) => t.goalId === goal.id)
+  const completedLinkedTasks = linkedTasks.filter((t) => t.completed).length
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [newMilestone, setNewMilestone] = useState('')
@@ -293,7 +295,7 @@ function GoalCard({ goal }: { goal: Goal }) {
             <ProgressBar value={goal.progress} />
           </div>
 
-          {/* Milestones summary */}
+          {/* Milestones + tasks summary */}
           {totalMilestones > 0 && (
             <div className="mt-2 flex items-center gap-2">
               <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#1e2d40' }}>
@@ -303,6 +305,14 @@ function GoalCard({ goal }: { goal: Goal }) {
                 />
               </div>
               <span className="text-xs text-slate-500">{completedMilestones}/{totalMilestones} milestones</span>
+            </div>
+          )}
+          {linkedTasks.length > 0 && (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <Square size={10} className="text-blue-400" />
+              <span className="text-xs" style={{ color: '#60a5fa' }}>
+                {completedLinkedTasks}/{linkedTasks.length} linked task{linkedTasks.length !== 1 ? 's' : ''}
+              </span>
             </div>
           )}
 
@@ -347,7 +357,24 @@ function GoalCard({ goal }: { goal: Goal }) {
               )}
             </div>
           )}
-        </div>
+          {/* Expanded linked tasks */}
+          {expanded && linkedTasks.length > 0 && (
+            <div className="mt-3 pl-2 border-l space-y-0.5" style={{ borderColor: '#1e3a5f' }}>
+              <p className="text-xs font-semibold mb-1" style={{ color: '#60a5fa' }}>Linked Tasks</p>
+              {linkedTasks.map((t) => (
+                <div key={t.id} className="flex items-center gap-2 py-0.5">
+                  <button onClick={() => toggleTask(t.id)}>
+                    {t.completed
+                      ? <CheckSquare size={13} className="text-green-400" />
+                      : <Square size={13} className="text-slate-500" />}
+                  </button>
+                  <span className={`flex-1 text-xs ${t.completed ? 'line-through text-slate-600' : 'text-slate-300'}`}>
+                    {t.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}        </div>
       </div>
 
       {editing && (

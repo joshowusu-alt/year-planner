@@ -17,6 +17,7 @@ import { WeeklyView } from './components/planner/WeeklyView'
 import { OnboardingModal } from './components/OnboardingModal'
 import { EventModal } from './components/planner/EventModal'
 import { StrategyPage } from './pages/StrategyPage'
+import { SearchPage } from './pages/SearchPage'
 import { useBreakpoint } from './hooks/useMediaQuery'
 
 function AppShell() {
@@ -83,6 +84,7 @@ function AppShell() {
           {page === 'tasks'    && <TasksPage />}
           {page === 'notes'    && <NotesPage />}
           {page === 'strategy' && <StrategyPage />}
+          {page === 'search'   && <SearchPage onNavigate={setPage} />}
           {page === 'settings' && <SettingsPage />}
         </div>
       </div>
@@ -94,7 +96,7 @@ function AppShell() {
       {mobileAddEvent && (
         <EventModal
           onSave={(data) => {
-            addEvent(data.date, data.title, data.category, data.notes, data.recurrence)
+            addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime)
             setMobileAddEvent(false)
           }}
           onClose={() => setMobileAddEvent(false)}

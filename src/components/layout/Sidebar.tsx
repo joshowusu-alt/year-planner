@@ -1,8 +1,8 @@
-import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers } from 'lucide-react'
+import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers, Search } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import { useAuth } from '../../context/AuthContext'
 
-export type Page = 'planner' | 'monthly' | 'weekly' | 'goals' | 'tasks' | 'notes' | 'settings' | 'strategy'
+export type Page = 'planner' | 'monthly' | 'weekly' | 'goals' | 'tasks' | 'notes' | 'settings' | 'strategy' | 'search'
 
 interface Props {
   page: Page
@@ -21,6 +21,7 @@ export function Sidebar({ page, onNavigate }: Props) {
     { id: 'tasks',    label: 'Tasks',        icon: CheckSquare },
     { id: 'strategy', label: 'Strategy',     icon: Layers },
     { id: 'notes',    label: 'Notes',        icon: FileText },
+    { id: 'search',   label: 'Search',       icon: Search },
   ]
 
   const bottomItems: { id: Page; label: string; icon: React.ElementType }[] = [

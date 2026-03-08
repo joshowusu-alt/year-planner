@@ -91,8 +91,11 @@ export interface PlannerEvent {
   category: EventCategory
   notes?: string
   recurrence?: RecurrenceRule   // if absent or type === 'none', event is one-time
+  /** Optional start/end times in HH:mm format, e.g. "09:00" */
+  startTime?: string
+  endTime?: string
   /** Overrides for individual recurring occurrences, keyed by dateStr */
-  instanceOverrides?: Record<string, { title?: string; category?: string; notes?: string }>
+  instanceOverrides?: Record<string, { title?: string; category?: string; notes?: string; startTime?: string; endTime?: string }>
   /** Dates on which this recurring event is suppressed */
   deletedDates?: string[]
   createdAt: string

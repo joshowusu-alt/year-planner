@@ -18,12 +18,13 @@ function TaskModal({
   onSave: (data: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void
   onClose: () => void
 }) {
-  const { currentYear } = usePlanner()
+  const { currentYear, store } = usePlanner()
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [date, setDate] = useState(initial?.date ?? defaultDate ?? format(new Date(), 'yyyy-MM-dd'))
   const [priority, setPriority] = useState<PriorityLevel>(initial?.priority ?? 'medium')
   const [period, setPeriod] = useState<TaskPeriod>(initial?.period ?? 'day')
+  const [goalId, setGoalId] = useState(initial?.goalId ?? '')
 
   return (
     <div
@@ -106,6 +107,23 @@ function TaskModal({
           </div>
         )}
 
+        {store.goals.length > 0 && (
+          <div>
+            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Link to Goal (optional)</label>
+            <select
+              value={goalId}
+              onChange={(e) => setGoalId(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+            >
+              <option value="">No goal</option>
+              {store.goals.map((g) => (
+                <option key={g.id} value={g.id}>{g.title}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         </div>
         {/* Sticky footer */}
         <div
@@ -125,6 +143,7 @@ function TaskModal({
                 priority,
                 completed: initial?.completed ?? false,
                 tags: [],
+                goalId: goalId || undefined,
               })
               onClose()
             }}
@@ -142,7 +161,7 @@ function TaskModal({
 // ─── Task item ────────────────────────────────────────────────────────────────
 
 function TaskItem({ task }: { task: Task }) {
-  const { toggleTask, removeTask, editTask } = usePlanner()
+  const { toggleTask, removeTask, editTask, store } = usePlanner()
   const [editing, setEditing] = useState(false)
 
   return (
@@ -184,6 +203,14 @@ function TaskItem({ task }: { task: Task }) {
               <Clock size={9} className="inline mr-1" />
               {task.period}
             </span>
+            {task.goalId && (() => {
+              const g = store.goals.find((gg) => gg.id === task.goalId)
+              return g ? (
+                <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#1e3a5f', color: '#60a5fa' }}>
+                  {g.title}
+                </span>
+              ) : null
+            })()}
           </div>
         </div>
 

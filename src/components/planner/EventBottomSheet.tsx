@@ -101,8 +101,11 @@ export function EventBottomSheet({ date, onClose, onAddEvent, onEditEvent }: Pro
                     <p className="text-sm font-semibold truncate" style={{ color: catStyle.color }}>
                       {ev.title}
                     </p>
-                    {ev.notes && (
-                      <p className="text-xs text-slate-500 truncate">{ev.notes}</p>
+                    {(ev.startTime || ev.notes) && (
+                      <p className="text-xs text-slate-500 truncate">
+                        {ev.startTime && <span>{ev.startTime}{ev.endTime ? `\u2013${ev.endTime}` : ''}{ev.notes ? ' · ' : ''}</span>}
+                        {ev.notes}
+                      </p>
                     )}
                   </div>
                   <button

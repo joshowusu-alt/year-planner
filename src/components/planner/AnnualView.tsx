@@ -68,11 +68,13 @@ export function AnnualView() {
     category: string
     notes?: string
     recurrence?: RecurrenceRule
+    startTime?: string
+    endTime?: string
   }) => {
     if (editingEvent) {
       editEvent(editingEvent.id, data)
     } else {
-      addEvent(data.date, data.title, data.category, data.notes, data.recurrence)
+      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime)
     }
   }, [editingEvent, editEvent, addEvent])
 

@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarRange, Calendar, Target, Layers } from 'lucide-react'
+import { CalendarDays, CalendarRange, Calendar, Target, Search } from 'lucide-react'
 import type { Page } from './Sidebar'
 
 interface Props {
@@ -11,7 +11,7 @@ const tabs: { id: Page; label: string; icon: React.ElementType }[] = [
   { id: 'monthly',  label: 'Monthly',  icon: CalendarRange },
   { id: 'weekly',   label: 'Weekly',   icon: Calendar },
   { id: 'goals',    label: 'Goals',    icon: Target },
-  { id: 'strategy', label: 'Strategy', icon: Layers },
+  { id: 'search',   label: 'Search',   icon: Search },
 ]
 
 export function BottomNavigation({ page, onNavigate }: Props) {

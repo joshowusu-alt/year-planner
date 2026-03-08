@@ -28,7 +28,10 @@ function EventChip({
       onClick={(ev) => { ev.stopPropagation(); onEdit(event) }}
       title={event.notes || event.title}
     >
-      <span>{event.title}</span>
+      <span>
+        {event.startTime && <span className="opacity-60 text-[10px]">{event.startTime} </span>}
+        {event.title}
+      </span>
       <Pencil size={9} className="opacity-0 group-hover:opacity-70 transition-opacity shrink-0" />
     </span>
   )
