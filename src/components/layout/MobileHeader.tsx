@@ -23,8 +23,9 @@ export function MobileHeader({ onMenuToggle, onAddEvent }: Props) {
         <Menu size={20} className="text-slate-300" />
       </button>
 
-      {/* Center: app name */}
-      <div className="text-center min-w-0">
+      {/* Center: icon + app name */}
+      <div className="flex items-center gap-2 min-w-0">
+        <img src="/icon.svg" alt="" className="h-7 w-7 rounded-md shrink-0" />
         <h1
           className="text-sm font-black tracking-widest uppercase truncate"
           style={{ color: '#d4af37' }}

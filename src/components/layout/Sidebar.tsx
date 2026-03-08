@@ -47,11 +47,14 @@ export function Sidebar({ page, onNavigate }: Props) {
             className="h-10 w-auto object-contain mb-1"
           />
         ) : (
-          <div
-            className="text-xl font-black tracking-widest"
-            style={{ color: '#d4af37' }}
-          >
-            {store.organizationName || 'My Planner'}
+          <div className="flex items-center gap-3">
+            <img src="/icon.svg" alt="STRATUM" className="h-9 w-9 rounded-lg shrink-0" />
+            <div
+              className="text-xl font-black tracking-widest"
+              style={{ color: '#d4af37' }}
+            >
+              {store.organizationName || 'My Planner'}
+            </div>
           </div>
         )}
         <p className="text-xs text-slate-500 leading-tight uppercase tracking-wider">
