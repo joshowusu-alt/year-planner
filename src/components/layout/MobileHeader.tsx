@@ -1,12 +1,13 @@
-import { Menu, Plus } from 'lucide-react'
+import { Menu, Plus, Zap } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 
 interface Props {
   onMenuToggle: () => void
   onAddEvent: () => void
+  onQuickAdd?: () => void
 }
 
-export function MobileHeader({ onMenuToggle, onAddEvent }: Props) {
+export function MobileHeader({ onMenuToggle, onAddEvent, onQuickAdd }: Props) {
   const { store } = usePlanner()
 
   return (
@@ -34,15 +35,27 @@ export function MobileHeader({ onMenuToggle, onAddEvent }: Props) {
         </h1>
       </div>
 
-      {/* Right: + Add Event */}
-      <button
-        onClick={onAddEvent}
-        className="h-11 flex items-center gap-1.5 px-3 rounded-xl text-xs font-bold active:scale-95 transition-transform"
-        style={{ background: '#d4af37', color: '#111827' }}
-      >
-        <Plus size={14} />
-        <span className="hidden xs:inline">Event</span>
-      </button>
+      {/* Right: ⚡ Quick Add + + Event */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {onQuickAdd && (
+          <button
+            onClick={onQuickAdd}
+            className="w-11 h-11 flex items-center justify-center rounded-xl active:bg-white/10 transition-colors"
+            aria-label="Quick add event"
+            style={{ color: '#d4af37' }}
+          >
+            <Zap size={18} />
+          </button>
+        )}
+        <button
+          onClick={onAddEvent}
+          className="h-11 flex items-center gap-1.5 px-3 rounded-xl text-xs font-bold active:scale-95 transition-transform"
+          style={{ background: '#d4af37', color: '#111827' }}
+        >
+          <Plus size={14} />
+          <span className="hidden xs:inline">Event</span>
+        </button>
+      </div>
     </header>
   )
 }

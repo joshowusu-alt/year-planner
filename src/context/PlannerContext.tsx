@@ -62,7 +62,7 @@ import {
 interface PlannerContextValue {
   store: PlannerStore
   // Events
-  addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string) => void
+  addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null) => void
   editEvent: (id: string, patch: Partial<PlannerEvent>) => void
   removeEvent: (id: string) => void
   editEventInstance: (baseId: string, dateStr: string, patch: { title?: string; category?: string; notes?: string; startTime?: string; endTime?: string }) => void
@@ -186,8 +186,8 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   }, [store, user?.id])
 
   // ── Events ──
-  const addEvent = useCallback((date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string) => {
-    setStore((s) => createEvent(s, { date, title, category, notes, recurrence, startTime, endTime }))
+  const addEvent = useCallback((date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null) => {
+    setStore((s) => createEvent(s, { date, title, category, notes, recurrence, startTime, endTime, reminder }))
   }, [])
 
   const editEvent = useCallback((id: string, patch: Partial<PlannerEvent>) => {

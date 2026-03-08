@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PlannerProvider } from './context/PlannerContext'
 import { usePlanner } from './context/PlannerContext'
 import { Sidebar, type Page } from './components/layout/Sidebar'
 import { MobileHeader } from './components/layout/MobileHeader'
+import { NaturalLanguageInput } from './components/NaturalLanguageInput'
 import { BottomNavigation } from './components/layout/BottomNavigation'
 import { MobileDrawer } from './components/layout/MobileDrawer'
 import { PlannerPage } from './pages/PlannerPage'
@@ -18,16 +19,39 @@ import { OnboardingModal } from './components/OnboardingModal'
 import { EventModal } from './components/planner/EventModal'
 import { StrategyPage } from './pages/StrategyPage'
 import { SearchPage } from './pages/SearchPage'
+import { SharedPlannerView } from './components/SharedPlannerView'
 import { useBreakpoint } from './hooks/useMediaQuery'
+import { useReminders } from './hooks/useReminders'
 
 function AppShell() {
   const { user, loading } = useAuth()
   const { addEvent } = usePlanner()
+  useReminders()
   const [page, setPage] = useState<Page>('planner')
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileAddEvent, setMobileAddEvent] = useState(false)
+  const [showNLInput, setShowNLInput] = useState(false)
+  const [shareToken, setShareToken] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('share')
+  })
   const { isMobile } = useBreakpoint()
+
+  // Global '/' shortcut → open NL quick-add (skip if focus is in a text input)
+  const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key !== '/') return
+    const tag = (e.target as HTMLElement)?.tagName?.toLowerCase()
+    const isEditable = tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable
+    if (isEditable) return
+    e.preventDefault()
+    setShowNLInput(true)
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [handleGlobalKeyDown])
 
   useEffect(() => {
     if (!user?.id) return
@@ -44,6 +68,15 @@ function AppShell() {
       <div className="flex h-screen items-center justify-center" style={{ background: '#0a0e1a' }}>
         <div className="text-slate-500 text-sm animate-pulse">Loading…</div>
       </div>
+    )
+  }
+
+  if (shareToken) {
+    return (
+      <SharedPlannerView
+        token={shareToken}
+        onClose={() => setShareToken(null)}
+      />
     )
   }
 
@@ -72,6 +105,7 @@ function AppShell() {
           <MobileHeader
             onMenuToggle={() => setDrawerOpen(true)}
             onAddEvent={() => setMobileAddEvent(true)}
+            onQuickAdd={() => setShowNLInput(true)}
           />
         )}
 
@@ -96,11 +130,16 @@ function AppShell() {
       {mobileAddEvent && (
         <EventModal
           onSave={(data) => {
-            addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime)
+          addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime, data.reminder)
             setMobileAddEvent(false)
           }}
           onClose={() => setMobileAddEvent(false)}
         />
+      )}
+
+      {/* Natural Language Quick-Add */}
+      {showNLInput && (
+        <NaturalLanguageInput onClose={() => setShowNLInput(false)} />
       )}
 
       {showOnboarding && (

@@ -3,14 +3,81 @@
  * 7-day view with events and tasks per day, drag-to-move support
  */
 import { useState } from 'react'
+import { DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import { addDays, format, subDays, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, CheckSquare, Square, GripVertical } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, CheckSquare, Square, GripVertical, LayoutList, Clock } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import type { PlannerEvent, RecurrenceRule } from '../../types'
 import { PRIORITY_COLORS, getCategoryStyle } from '../../types'
 import { EventModal } from '../planner/EventModal'
 import { EventBottomSheet } from '../planner/EventBottomSheet'
 import { useBreakpoint } from '../../hooks/useMediaQuery'
+import { WeeklyTimeGrid } from './WeeklyTimeGrid'
+
+// ── DnD sub-components ────────────────────────────────────────────────────────
+
+interface DraggableEventCardProps {
+  event: PlannerEvent
+  catStyle: { bgColor: string; color: string }
+  dateStr: string
+  onEdit: (ev: PlannerEvent) => void
+}
+
+function DraggableEventCard({ event, catStyle, dateStr, onEdit }: DraggableEventCardProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: event.id,
+    data: { type: 'event', dateStr },
+  })
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className="flex items-start gap-1 rounded-lg px-2 py-1.5 cursor-grab active:cursor-grabbing group"
+      style={{
+        background: catStyle.bgColor,
+        border: `1px solid ${catStyle.color}`,
+        transform: CSS.Transform.toString(transform),
+        opacity: isDragging ? 0.4 : 1,
+        touchAction: 'none',
+      }}
+      onClick={(e) => { e.stopPropagation(); onEdit(event) }}
+    >
+      <GripVertical size={10} className="text-slate-600 mt-0.5 shrink-0" />
+      <span className="text-xs font-semibold leading-tight" style={{ color: catStyle.color }}>
+        {event.title}
+      </span>
+    </div>
+  )
+}
+
+interface DroppableDayColumnProps {
+  dateStr: string
+  today: boolean
+  isMobile: boolean
+  className?: string
+  children: React.ReactNode
+}
+
+function DroppableDayColumn({ dateStr, today, isMobile, className, children }: DroppableDayColumnProps) {
+  const { isOver, setNodeRef } = useDroppable({ id: dateStr })
+  const highlight = !isMobile && isOver
+  const style: React.CSSProperties = isMobile
+    ? {
+        background: today ? '#0d1a2e' : '#0d1224',
+        border: today ? '1px solid #d4af37' : '1px solid #1e2d40',
+      }
+    : {
+        borderColor: highlight ? 'rgba(212,175,55,0.4)' : '#1e2d40',
+        background: highlight ? 'rgba(212,175,55,0.08)' : today ? '#0d1a2e' : 'transparent',
+      }
+  return (
+    <div ref={isMobile ? undefined : setNodeRef} className={className} style={style}>
+      {children}
+    </div>
+  )
+}
 
 export function WeeklyView() {
   const {
@@ -25,9 +92,24 @@ export function WeeklyView() {
   const [editingEvent, setEditingEvent] = useState<PlannerEvent | null>(null)
   const [newTaskDate, setNewTaskDate] = useState<string | null>(null)
   const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [draggedEventId, setDraggedEventId] = useState<string | null>(null)
+  const [activeEventId, setActiveEventId] = useState<string | null>(null)
   const [bottomSheetDate, setBottomSheetDate] = useState<string | null>(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const { isMobile } = useBreakpoint()
+
+  const [viewMode, setViewMode] = useState<'cards' | 'grid'>(() => {
+    try {
+      const saved = localStorage.getItem('stratum_weekly_view_mode')
+      return saved === 'grid' ? 'grid' : 'cards'
+    } catch {
+      return 'cards'
+    }
+  })
+
+  function setAndPersistViewMode(mode: 'cards' | 'grid') {
+    setViewMode(mode)
+    try { localStorage.setItem('stratum_weekly_view_mode', mode) } catch { /* ignore */ }
+  }
 
   const weekStart = new Date(currentWeekStart)
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -55,11 +137,11 @@ export function WeeklyView() {
     return store.tasks.filter((t) => t.period === 'day' && t.date === key)
   }
 
-  function handleSave(data: { date: string; title: string; category: string; notes?: string; recurrence?: RecurrenceRule; startTime?: string; endTime?: string }) {
+  function handleSave(data: { date: string; title: string; category: string; notes?: string; recurrence?: RecurrenceRule; startTime?: string; endTime?: string; reminder?: number | null }) {
     if (editingEvent) {
       editEvent(editingEvent.id, data)
     } else {
-      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime)
+      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime, data.reminder)
     }
   }
 
@@ -77,16 +159,23 @@ export function WeeklyView() {
     setNewTaskDate(null)
   }
 
-  // ── Drag-and-drop event rescheduling ──────────────────────────────────────
-  function onDragStart(eventId: string) {
-    setDraggedEventId(eventId)
+  // ── Drag-and-drop event rescheduling (dnd-kit) ────────────────────────────
+  function handleDragStart(evt: DragStartEvent) {
+    setActiveEventId(evt.active.id as string)
   }
 
-  function onDrop(targetDate: string) {
-    if (!draggedEventId) return
-    editEvent(draggedEventId, { date: targetDate })
-    setDraggedEventId(null)
+  function handleDragEnd(evt: DragEndEvent) {
+    const { active, over } = evt
+    setActiveEventId(null)
+    if (!over) return
+    const sourceDateStr = (active.data.current as { type: string; dateStr: string } | undefined)?.dateStr
+    if (sourceDateStr !== (over.id as string)) {
+      editEvent(active.id as string, { date: over.id as string })
+    }
   }
+
+  const activeEvent = activeEventId ? store.events.find((e) => e.id === activeEventId) ?? null : null
+  const activeCatStyle = activeEvent ? getCategoryStyle(activeEvent.category, store.categories) : null
 
   const weekRange = `${format(weekStart, 'MMM d')} – ${format(addDays(weekStart, 6), 'MMM d, yyyy')}`
 
@@ -119,6 +208,34 @@ export function WeeklyView() {
           ↩ Today
         </button>
 
+        {/* View-mode toggle */}
+        <div className="flex items-center gap-1 rounded-lg p-0.5" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+          <button
+            onClick={() => setAndPersistViewMode('cards')}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-colors"
+            style={{
+              background: viewMode === 'cards' ? '#1e2d40' : 'transparent',
+              color: viewMode === 'cards' ? '#e2e8f0' : '#94a3b8',
+            }}
+            title="Card view"
+          >
+            <LayoutList size={13} />
+            <span className="hidden sm:inline">Cards</span>
+          </button>
+          <button
+            onClick={() => setAndPersistViewMode('grid')}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-colors"
+            style={{
+              background: viewMode === 'grid' ? '#1e2d40' : 'transparent',
+              color: viewMode === 'grid' ? '#e2e8f0' : '#94a3b8',
+            }}
+            title="Timeline view"
+          >
+            <Clock size={13} />
+            <span className="hidden sm:inline">Timeline</span>
+          </button>
+        </div>
+
         <div className="flex-1" />
 
         <button
@@ -131,14 +248,18 @@ export function WeeklyView() {
       </div>
 
       {/* Week columns — grid on desktop, vertical cards on mobile */}
-      <div className="flex-1 overflow-auto">
-        <div
-          className={isMobile
-            ? 'flex flex-col gap-2 p-3'
-            : 'grid grid-cols-7 h-full'
-          }
-          style={isMobile ? {} : { minWidth: '700px' }}
-        >
+      {viewMode === 'grid' ? (
+        <WeeklyTimeGrid />
+      ) : (
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="flex-1 overflow-auto">
+          <div
+            className={isMobile
+              ? 'flex flex-col gap-2 p-3'
+              : 'grid grid-cols-7 h-full'
+            }
+            style={isMobile ? {} : { minWidth: '700px' }}
+          >
           {days.map((date) => {
             const events = getEvents(date)
             const tasks = getTasks(date)
@@ -147,21 +268,12 @@ export function WeeklyView() {
             const dateStr = format(date, 'yyyy-MM-dd')
 
             return (
-              <div
+              <DroppableDayColumn
                 key={dateStr}
-                className={isMobile
-                  ? 'rounded-xl p-2'
-                  : 'flex flex-col border-r'
-                }
-                style={isMobile
-                  ? {
-                      background: today ? '#0d1a2e' : '#0d1224',
-                      border: today ? '1px solid #d4af37' : '1px solid #1e2d40',
-                    }
-                  : { borderColor: '#1e2d40', background: today ? '#0d1a2e' : 'transparent' }
-                }
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => onDrop(dateStr)}
+                dateStr={dateStr}
+                today={today}
+                isMobile={isMobile}
+                className={isMobile ? 'rounded-xl p-2' : 'flex flex-col border-r'}
               >
                 {/* Day header */}
                 <div
@@ -226,22 +338,13 @@ export function WeeklyView() {
                         {ev.title}
                       </span>
                     ) : (
-                      <div
+                      <DraggableEventCard
                         key={ev.id}
-                        draggable
-                        onDragStart={() => onDragStart(ev.id)}
-                        className="flex items-start gap-1 rounded-lg px-2 py-1.5 cursor-grab active:cursor-grabbing group"
-                        style={{
-                          background: catStyle.bgColor,
-                          border: `1px solid ${catStyle.color}`,
-                        }}
-                        onClick={() => { setEditingEvent(ev); setModalDate(null) }}
-                      >
-                        <GripVertical size={10} className="text-slate-600 mt-0.5 shrink-0" />
-                        <span className="text-xs font-semibold leading-tight" style={{ color: catStyle.color }}>
-                          {ev.title}
-                        </span>
-                      </div>
+                        event={ev}
+                        catStyle={catStyle}
+                        dateStr={dateStr}
+                        onEdit={(e) => { setEditingEvent(e); setModalDate(null) }}
+                      />
                     )
                   })}
 
@@ -318,14 +421,35 @@ export function WeeklyView() {
                 >
                   <Plus size={11} /> event
                 </button>
-              </div>
+              </DroppableDayColumn>
             )
           })}
+          </div>
         </div>
-      </div>
+        <DragOverlay dropAnimation={null}>
+          {activeEvent && activeCatStyle && (
+            <div
+              className="flex items-start gap-1 rounded-lg px-2 py-1.5 pointer-events-none"
+              style={{
+                background: activeCatStyle.bgColor,
+                border: `1px solid ${activeCatStyle.color}`,
+                opacity: 0.85,
+                transform: 'rotate(-2deg)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              }}
+            >
+              <GripVertical size={10} className="text-slate-600 mt-0.5 shrink-0" />
+              <span className="text-xs font-semibold leading-tight" style={{ color: activeCatStyle.color }}>
+                {activeEvent.title}
+              </span>
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
+      )}
 
       {/* Modal */}
-      {(modalDate !== null || editingEvent !== null) && (
+      {viewMode === 'cards' && (modalDate !== null || editingEvent !== null) && (
         <EventModal
           event={editingEvent}
           defaultDate={modalDate ?? undefined}
@@ -336,12 +460,14 @@ export function WeeklyView() {
       )}
 
       {/* Mobile bottom sheet */}
-      <EventBottomSheet
-        date={bottomSheetDate}
-        onClose={() => setBottomSheetDate(null)}
-        onAddEvent={(ds) => { setBottomSheetDate(null); setEditingEvent(null); setModalDate(ds) }}
-        onEditEvent={(ev) => { setBottomSheetDate(null); setEditingEvent(ev); setModalDate(null) }}
-      />
+      {viewMode === 'cards' && (
+        <EventBottomSheet
+          date={bottomSheetDate}
+          onClose={() => setBottomSheetDate(null)}
+          onAddEvent={(ds) => { setBottomSheetDate(null); setEditingEvent(null); setModalDate(ds) }}
+          onEditEvent={(ev) => { setBottomSheetDate(null); setEditingEvent(ev); setModalDate(null) }}
+        />
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo, type FormEvent } from 'react'
-import { X, Trash2, Save, RotateCcw, ChevronDown, Clock } from 'lucide-react'
+import { X, Trash2, Save, RotateCcw, ChevronDown, Clock, Bell } from 'lucide-react'
 import type { PlannerEvent, RecurrenceRule, RecurrenceType } from '../../types'
 import { RECURRENCE_LABELS, getBaseEventId } from '../../types'
 import { usePlanner } from '../../context/PlannerContext'
@@ -9,6 +9,8 @@ interface Props {
   event?: PlannerEvent | null
   /** Pre-fill date when adding from a cell */
   defaultDate?: string
+  /** Pre-fill start time when adding from a time slot */
+  defaultStartTime?: string
   onSave: (data: {
     date: string
     title: string
@@ -17,13 +19,14 @@ interface Props {
     recurrence?: RecurrenceRule
     startTime?: string
     endTime?: string
+    reminder?: number | null
   }) => void
   onDelete?: (id: string) => void
   onClose: () => void
 }
 
 
-export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Props) {
+export function EventModal({ event, defaultDate, defaultStartTime, onSave, onDelete, onClose }: Props) {
   const isEdit = Boolean(event)
   const { store, editEventInstance, removeEventOccurrence } = usePlanner()
   const { categories } = store
@@ -34,9 +37,10 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
     event?.category ?? (categories[0]?.id ?? '')
   )
   const [notes, setNotes] = useState(event?.notes ?? '')
-  const [startTime, setStartTime] = useState(event?.startTime ?? '')
+  const [startTime, setStartTime] = useState(event?.startTime ?? defaultStartTime ?? '')
   const [endTime, setEndTime] = useState(event?.endTime ?? '')
-  const [showTime, setShowTime] = useState(Boolean(event?.startTime))
+  const [showTime, setShowTime] = useState(Boolean(event?.startTime) || Boolean(defaultStartTime))
+  const [reminder, setReminder] = useState<number | null>(event?.reminder ?? null)
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(
     event?.recurrence?.type ?? 'none'
   )
@@ -82,7 +86,7 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
       recurrenceType !== 'none'
         ? { type: recurrenceType, until: recurrenceUntil || undefined }
         : undefined
-    onSave({ date, title: title.trim(), category, notes: notes.trim() || undefined, recurrence, startTime: startTime || undefined, endTime: endTime || undefined })
+    onSave({ date, title: title.trim(), category, notes: notes.trim() || undefined, recurrence, startTime: startTime || undefined, endTime: endTime || undefined, reminder: (showTime && startTime) ? reminder : null })
     onClose()
   }
 
@@ -308,6 +312,32 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
                     style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0', colorScheme: 'dark' }}
                   />
                 </div>
+              </div>
+            )}
+            {showTime && startTime && (
+              <div className="mt-3">
+                <label className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+                  <Bell size={11} />
+                  Reminder
+                </label>
+                <select
+                  value={reminder ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setReminder(v === '' ? null : Number(v))
+                  }}
+                  className="rounded-lg px-3 py-2 text-sm focus:outline-none w-full"
+                  style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+                >
+                  <option value="">No reminder</option>
+                  <option value="0">At time of event</option>
+                  <option value="5">5 minutes before</option>
+                  <option value="15">15 minutes before</option>
+                  <option value="30">30 minutes before</option>
+                  <option value="60">1 hour before</option>
+                  <option value="120">2 hours before</option>
+                  <option value="1440">1 day before</option>
+                </select>
               </div>
             )}
           </div>

@@ -1,9 +1,10 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react'
-import { Save, Upload, Plus, Trash2, Pencil, X, RotateCcw } from 'lucide-react'
+import { Save, Upload, Plus, Trash2, Pencil, X, RotateCcw, Share2 } from 'lucide-react'
 import { usePlanner } from '../context/PlannerContext'
 import type { EventCategoryDef } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
 import { OnboardingModal } from '../components/OnboardingModal'
+import { ShareModal } from '../components/ShareModal'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured, uploadLogoToStorage } from '../lib/supabase'
 
@@ -20,6 +21,7 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   // Category state
   const [editingCatId, setEditingCatId] = useState<string | null>(null)
@@ -302,6 +304,32 @@ export function SettingsPage() {
           </div>
         </section>
 
+        {/* Sharing */}
+        <section>
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">
+            Sharing
+          </h3>
+          {isSupabaseConfigured ? (
+            <div className="space-y-3">
+              <p className="text-xs text-slate-500">
+                Create a read-only share link. Anyone with the link can view your planner without signing in.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+                style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
+              >
+                <Share2 size={14} /> Manage Share Links
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">
+              Sharing requires Supabase. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.
+            </p>
+          )}
+        </section>
+
         {/* Save */}
         <button
           type="submit"
@@ -334,6 +362,10 @@ export function SettingsPage() {
             setShowOnboarding(false)
           }}
         />
+      )}
+
+      {showShareModal && (
+        <ShareModal onClose={() => setShowShareModal(false)} />
       )}
     </div>
   )

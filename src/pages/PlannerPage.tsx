@@ -4,7 +4,7 @@ import { AnnualView } from '../components/planner/AnnualView'
 import { YearPlannerTable } from '../components/planner/YearPlannerTable'
 import { TopBar } from '../components/layout/TopBar'
 import { EventModal } from '../components/planner/EventModal'
-import type { EventCategory } from '../types'
+import type { EventCategory, RecurrenceRule } from '../types'
 
 const QUARTERS = [1, 4, 7, 10]
 
@@ -21,8 +21,12 @@ export function PlannerPage() {
     title: string
     category: EventCategory
     notes?: string
+    recurrence?: RecurrenceRule
+    startTime?: string
+    endTime?: string
+    reminder?: number | null
   }) {
-    addEvent(data.date, data.title, data.category, data.notes)
+    addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime, data.reminder)
     setAddModal(false)
   }
 

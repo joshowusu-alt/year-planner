@@ -94,6 +94,8 @@ export interface PlannerEvent {
   /** Optional start/end times in HH:mm format, e.g. "09:00" */
   startTime?: string
   endTime?: string
+  /** Minutes before event start to show a reminder; null = disabled */
+  reminder?: number | null
   /** Overrides for individual recurring occurrences, keyed by dateStr */
   instanceOverrides?: Record<string, { title?: string; category?: string; notes?: string; startTime?: string; endTime?: string }>
   /** Dates on which this recurring event is suppressed */

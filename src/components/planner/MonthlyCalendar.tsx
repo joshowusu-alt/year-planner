@@ -3,6 +3,8 @@
  * Full month grid with events, tasks, and notes dots per day
  */
 import { useState } from 'react'
+import { DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 import {
   format,
   startOfMonth,
@@ -31,23 +33,63 @@ interface DayCellProps {
   noteCount: number
   onAddEvent: (dateStr: string) => void
   onEditEvent: (e: PlannerEvent) => void
+  isMobile: boolean
 }
 
-function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEvent, onEditEvent }: DayCellProps) {
+// ── Draggable event chip ───────────────────────────────────────────────────────
+
+interface DraggableEventChipProps {
+  event: PlannerEvent
+  catStyle: { bgColor: string; color: string }
+  dateStr: string
+  onEdit: (ev: PlannerEvent) => void
+}
+
+function DraggableEventChip({ event, catStyle, dateStr, onEdit }: DraggableEventChipProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: event.id,
+    data: { type: 'event', dateStr },
+  })
+  return (
+    <button
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className="text-left text-xs px-1 py-0.5 rounded truncate leading-tight w-full cursor-grab active:cursor-grabbing"
+      style={{
+        background: catStyle.bgColor,
+        color: catStyle.color,
+        transform: CSS.Transform.toString(transform),
+        opacity: isDragging ? 0.4 : 1,
+        touchAction: 'none',
+      }}
+      onClick={(e) => { e.stopPropagation(); onEdit(event) }}
+    >
+      {event.title}
+    </button>
+  )
+}
+
+function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEvent, onEditEvent, isMobile }: DayCellProps) {
   const today = isToday(date)
   const sunday = date.getDay() === 0
   const { store } = usePlanner()
+  const dateStr = format(date, 'yyyy-MM-dd')
+  const { isOver, setNodeRef } = useDroppable({ id: dateStr })
+  const showHighlight = !isMobile && isOver
 
   return (
     <div
+      ref={isMobile ? undefined : setNodeRef}
       className={`min-h-16 md:min-h-24 p-1 md:p-1.5 flex flex-col border-b border-r group cursor-pointer transition-colors hover:bg-white/5 ${
         !isCurrentMonth ? 'opacity-30' : ''
       }`}
       style={{
-        borderColor: '#1e2d40',
+        borderColor: showHighlight ? '#d4af37' : '#1e2d40',
         ...(today ? { borderTop: '2px solid #d4af37' } : {}),
+        ...(showHighlight ? { background: 'rgba(212,175,55,0.08)' } : {}),
       }}
-      onClick={() => onAddEvent(format(date, 'yyyy-MM-dd'))}
+      onClick={() => onAddEvent(dateStr)}
     >
       {/* Date number */}
       <div className="flex items-start justify-between mb-1">
@@ -64,7 +106,7 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
         </span>
         <button
           className="opacity-0 group-hover:opacity-60 hover:opacity-100!"
-          onClick={(ev) => { ev.stopPropagation(); onAddEvent(format(date, 'yyyy-MM-dd')) }}
+          onClick={(ev) => { ev.stopPropagation(); onAddEvent(dateStr) }}
         >
           <Plus size={11} style={{ color: '#d4af37' }} />
         </button>
@@ -74,7 +116,7 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
       <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
         {events.slice(0, 3).map((ev) => {
           const catStyle = getCategoryStyle(ev.category, store.categories)
-          return (
+          return isMobile ? (
             <button
               key={ev.id}
               className="text-left text-xs px-1 py-0.5 rounded truncate leading-tight w-full"
@@ -83,6 +125,14 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
             >
               {ev.title}
             </button>
+          ) : (
+            <DraggableEventChip
+              key={ev.id}
+              event={ev}
+              catStyle={catStyle}
+              dateStr={dateStr}
+              onEdit={onEditEvent}
+            />
           )
         })}
         {events.length > 3 && (
@@ -111,7 +161,9 @@ export function MonthlyCalendar() {
   const [modalDate, setModalDate] = useState<string | null>(null)
   const [editingEvent, setEditingEvent] = useState<PlannerEvent | null>(null)
   const [bottomSheetDate, setBottomSheetDate] = useState<string | null>(null)
+  const [activeEventId, setActiveEventId] = useState<string | null>(null)
   const { isMobile } = useBreakpoint()
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const viewDate = new Date(currentYear, currentMonth - 1, 1)
 
@@ -143,13 +195,31 @@ export function MonthlyCalendar() {
     return store.notes.filter((n) => n.periodType === 'day' && n.periodRef === key).length
   }
 
-  function handleSave(data: { date: string; title: string; category: string; notes?: string; recurrence?: RecurrenceRule; startTime?: string; endTime?: string }) {
+  function handleSave(data: { date: string; title: string; category: string; notes?: string; recurrence?: RecurrenceRule; startTime?: string; endTime?: string; reminder?: number | null }) {
     if (editingEvent) {
       editEvent(editingEvent.id, data)
     } else {
-      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime)
+      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime, data.reminder)
     }
   }
+
+  function handleDragStart(evt: DragStartEvent) {
+    if (isMobile) return
+    setActiveEventId(evt.active.id as string)
+  }
+
+  function handleDragEnd(evt: DragEndEvent) {
+    const { active, over } = evt
+    setActiveEventId(null)
+    if (!over || isMobile) return
+    const sourceDateStr = (active.data.current as { type: string; dateStr: string } | undefined)?.dateStr
+    if (sourceDateStr !== (over.id as string)) {
+      editEvent(active.id as string, { date: over.id as string })
+    }
+  }
+
+  const activeEvent = activeEventId ? store.events.find((e) => e.id === activeEventId) ?? null : null
+  const activeCatStyle = activeEvent ? getCategoryStyle(activeEvent.category, store.categories) : null
 
   const WEEKDAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -210,24 +280,44 @@ export function MonthlyCalendar() {
 
         {/* Day cells */}
         <div className="grid grid-cols-7 border-l" style={{ borderColor: '#1e2d40' }}>
-          {days.map((date) => (
-            <DayCell
-              key={date.toISOString()}
-              date={date}
-              isCurrentMonth={isSameMonth(date, viewDate)}
-              events={getEventsForDay(date)}
-              taskCount={getTaskCount(date)}
-              noteCount={getNoteCount(date)}
-              onAddEvent={(ds) => {
-                if (isMobile) {
-                  setBottomSheetDate(ds)
-                } else {
-                  setEditingEvent(null); setModalDate(ds)
-                }
-              }}
-              onEditEvent={(ev) => { setEditingEvent(ev); setModalDate(null) }}
-            />
-          ))}
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            {days.map((date) => (
+              <DayCell
+                key={date.toISOString()}
+                date={date}
+                isCurrentMonth={isSameMonth(date, viewDate)}
+                events={getEventsForDay(date)}
+                taskCount={getTaskCount(date)}
+                noteCount={getNoteCount(date)}
+                isMobile={isMobile}
+                onAddEvent={(ds) => {
+                  if (isMobile) {
+                    setBottomSheetDate(ds)
+                  } else {
+                    setEditingEvent(null); setModalDate(ds)
+                  }
+                }}
+                onEditEvent={(ev) => { setEditingEvent(ev); setModalDate(null) }}
+              />
+            ))}
+            <DragOverlay dropAnimation={null}>
+              {activeEvent && activeCatStyle && (
+                <div
+                  className="text-xs px-1.5 py-0.5 rounded truncate pointer-events-none"
+                  style={{
+                    background: activeCatStyle.bgColor,
+                    color: activeCatStyle.color,
+                    border: `1px solid ${activeCatStyle.color}`,
+                    opacity: 0.85,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                    maxWidth: 140,
+                  }}
+                >
+                  {activeEvent.title}
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         </div>
       </div>
 
