@@ -185,7 +185,7 @@ function TaskItem({ task }: { task: Task }) {
           {task.description && (
             <p className="text-xs text-slate-500 mt-0.5">{task.description}</p>
           )}
-          <div className="flex items-center gap-3 mt-1.5">
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
             <span
               className="text-xs font-semibold"
               style={{ color: PRIORITY_COLORS[task.priority] }}
@@ -206,7 +206,7 @@ function TaskItem({ task }: { task: Task }) {
             {task.goalId && (() => {
               const g = store.goals.find((gg) => gg.id === task.goalId)
               return g ? (
-                <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#1e3a5f', color: '#60a5fa' }}>
+                <span className="text-xs px-1.5 py-0.5 rounded max-w-30 truncate block" style={{ background: '#1e3a5f', color: '#60a5fa' }}>
                   {g.title}
                 </span>
               ) : null

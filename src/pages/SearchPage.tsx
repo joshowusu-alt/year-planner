@@ -251,8 +251,8 @@ export function SearchPage({ onNavigate }: Props) {
           </section>
         )}
 
-        {/* Bottom padding for mobile nav */}
-        <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
+        {/* Bottom padding — clears mobile bottom nav + safe area */}
+        <div className="h-20" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} />
       </div>
     </div>
   )
