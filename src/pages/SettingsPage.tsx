@@ -7,8 +7,11 @@ import { OnboardingModal } from '../components/OnboardingModal'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured, uploadLogoToStorage } from '../lib/supabase'
 
+/** Static set of built-in category IDs — these can be renamed/recoloured but not deleted. */
+const DEFAULT_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map((c) => c.id))
+
 export function SettingsPage() {
-  const { store, updateSettings, setMonthTheme, addCategory, updateCategory, removeCategory } = usePlanner()
+  const { store, updateSettings, setMonthTheme, addCategory, updateCategory, removeCategory, resetCategories } = usePlanner()
   const { user } = useAuth()
 
   const [orgName, setOrgName] = useState(store.organizationName)
@@ -206,10 +209,7 @@ export function SettingsPage() {
               type="button"
               onClick={() => {
                 if (confirm('Reset to default categories? Your current categories will be replaced.')) {
-                  // Remove all existing, add defaults
-                  const existing = [...store.categories]
-                  existing.forEach((c) => removeCategory(c.id))
-                  DEFAULT_CATEGORIES.forEach((c) => addCategory({ label: c.label, color: c.color, bgColor: c.bgColor }))
+                  resetCategories()
                 }
               }}
               className="text-xs font-semibold px-2 py-1 rounded-lg hover:bg-white/5 transition-colors"
@@ -218,9 +218,13 @@ export function SettingsPage() {
               Restore Defaults
             </button>
           </div>
+
+          {/* IDs of the four built-in defaults — cannot be deleted */}
           <div className="space-y-2 mb-4">
-            {store.categories.map((cat) => (
-              <div key={cat.id} className="flex items-center gap-2 group">
+            {store.categories.map((cat) => {
+              const isDefault = DEFAULT_CATEGORY_IDS.has(cat.id)
+              return (
+              <div key={cat.id} className="flex items-center gap-1">
                 {editingCatId === cat.id ? (
                   <EditCategoryRow
                     cat={cat}
@@ -229,32 +233,34 @@ export function SettingsPage() {
                   />
                 ) : (
                   <>
-                    <span
-                      className="inline-block w-4 h-4 rounded shrink-0"
-                      style={{ background: cat.bgColor, border: `1px solid ${cat.color}` }}
-                    />
-                    <span className="flex-1 text-sm font-semibold" style={{ color: cat.color }}>{cat.label}</span>
                     <button
                       type="button"
                       onClick={() => setEditingCatId(cat.id)}
-                      className="opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity p-1 rounded"
+                      className="flex flex-1 items-center gap-2 text-left py-1.5 px-2 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors min-w-0"
                     >
-                      <Pencil size={12} className="text-slate-400" />
+                      <span
+                        className="inline-block w-4 h-4 rounded shrink-0"
+                        style={{ background: cat.bgColor, border: `1px solid ${cat.color}` }}
+                      />
+                      <span className="flex-1 text-sm font-semibold truncate" style={{ color: cat.color }}>{cat.label}</span>
+                      <Pencil size={12} className="text-slate-500 shrink-0" />
                     </button>
                     <button
                       type="button"
                       onClick={() => { if (confirm(`Delete "${cat.label}"?`)) removeCategory(cat.id) }}
-                      className="opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity p-1 rounded disabled:opacity-20 disabled:cursor-not-allowed"
-                      disabled={store.categories.length <= 1}
-                      title={store.categories.length <= 1 ? 'Cannot delete the last category' : `Delete ${cat.label}`}
+                      className="p-1.5 rounded transition-opacity disabled:opacity-25 disabled:cursor-not-allowed hover:bg-white/5"
+                      disabled={isDefault || store.categories.length <= 1}
+                      title={isDefault ? 'Built-in categories cannot be deleted' : store.categories.length <= 1 ? 'Cannot delete the last category' : `Delete ${cat.label}`}
                     >
                       <Trash2 size={12} className="text-red-400" />
                     </button>
                   </>
                 )}
               </div>
-            ))}
+            )})
+            }
           </div>
+
 
           {/* Add new category */}
           <div className="flex items-center gap-2 flex-wrap">
