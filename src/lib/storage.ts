@@ -116,6 +116,50 @@ export function deleteEvent(store: PlannerStore, id: string): PlannerStore {
   return { ...store, events: store.events.filter((e) => e.id !== id) }
 }
 
+/** Save overrides for a single occurrence of a recurring event. */
+export function updateEventInstance(
+  store: PlannerStore,
+  baseId: string,
+  dateStr: string,
+  patch: { title?: string; category?: string; notes?: string }
+): PlannerStore {
+  return {
+    ...store,
+    events: store.events.map((e) =>
+      e.id === baseId
+        ? {
+            ...e,
+            instanceOverrides: {
+              ...e.instanceOverrides,
+              [dateStr]: { ...e.instanceOverrides?.[dateStr], ...patch },
+            },
+            updatedAt: new Date().toISOString(),
+          }
+        : e
+    ),
+  }
+}
+
+/** Suppress a single occurrence of a recurring event on a specific date. */
+export function deleteEventOccurrence(
+  store: PlannerStore,
+  baseId: string,
+  dateStr: string
+): PlannerStore {
+  return {
+    ...store,
+    events: store.events.map((e) =>
+      e.id === baseId
+        ? {
+            ...e,
+            deletedDates: [...(e.deletedDates ?? []), dateStr],
+            updatedAt: new Date().toISOString(),
+          }
+        : e
+    ),
+  }
+}
+
 export function updateMonthMeta(
   store: PlannerStore,
   month: number,

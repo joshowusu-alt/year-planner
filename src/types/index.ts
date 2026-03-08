@@ -47,6 +47,7 @@ export const RECURRENCE_LABELS: Record<RecurrenceType, string> = {
  * Returns true if the event (base or recurring) should appear on dateStr.
  */
 export function isRecurringOnDate(ev: PlannerEvent, dateStr: string): boolean {
+  if (ev.deletedDates?.includes(dateStr)) return false
   if (!ev.recurrence || ev.recurrence.type === 'none') return ev.date === dateStr
   if (dateStr < ev.date) return false
   if (ev.recurrence.until && dateStr > ev.recurrence.until) return false
@@ -90,6 +91,10 @@ export interface PlannerEvent {
   category: EventCategory
   notes?: string
   recurrence?: RecurrenceRule   // if absent or type === 'none', event is one-time
+  /** Overrides for individual recurring occurrences, keyed by dateStr */
+  instanceOverrides?: Record<string, { title?: string; category?: string; notes?: string }>
+  /** Dates on which this recurring event is suppressed */
+  deletedDates?: string[]
   createdAt: string
   updatedAt: string
 }

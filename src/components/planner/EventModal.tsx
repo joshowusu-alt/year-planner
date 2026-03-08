@@ -1,7 +1,7 @@
 import { useState, useMemo, type FormEvent } from 'react'
 import { X, Trash2, Save, RotateCcw, ChevronDown } from 'lucide-react'
 import type { PlannerEvent, RecurrenceRule, RecurrenceType } from '../../types'
-import { RECURRENCE_LABELS } from '../../types'
+import { RECURRENCE_LABELS, getBaseEventId } from '../../types'
 import { usePlanner } from '../../context/PlannerContext'
 
 interface Props {
@@ -23,7 +23,7 @@ interface Props {
 
 export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Props) {
   const isEdit = Boolean(event)
-  const { store } = usePlanner()
+  const { store, editEventInstance, removeEventOccurrence } = usePlanner()
   const { categories } = store
 
   const [date, setDate] = useState(event?.date ?? defaultDate ?? '')
@@ -37,6 +37,8 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
   )
   const [recurrenceUntil, setRecurrenceUntil] = useState(event?.recurrence?.until ?? '')
   const [showAllCategories, setShowAllCategories] = useState(false)
+  // When editing a virtual occurrence: 'this' = only this date, 'all' = all occurrences
+  const [scope, setScope] = useState<'this' | 'all'>(event?.id.includes('__') ? 'this' : 'all')
 
   // If editing a virtual occurrence, show the base id for context
   const isVirtual = Boolean(event && event.id.includes('__'))
@@ -57,6 +59,18 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!title.trim() || !date) return
+
+    if (isVirtual && scope === 'this') {
+      // Save overrides for this date only — does NOT touch other occurrences
+      editEventInstance(getBaseEventId(event!.id), event!.date, {
+        title: title.trim(),
+        category,
+        notes: notes.trim() || undefined,
+      })
+      onClose()
+      return
+    }
+
     const recurrence: RecurrenceRule | undefined =
       recurrenceType !== 'none'
         ? { type: recurrenceType, until: recurrenceUntil || undefined }
@@ -66,8 +80,15 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
   }
 
   function handleDelete() {
-    if (event && onDelete) {
-      if (window.confirm(`Delete "${event.title}"?`)) {
+    if (!event) return
+    if (isVirtual && scope === 'this') {
+      // Skip just this occurrence — all other dates remain
+      removeEventOccurrence(getBaseEventId(event.id), event.date)
+      onClose()
+      return
+    }
+    if (onDelete) {
+      if (window.confirm(`Delete "${event.title}"? This will remove all occurrences.`)) {
         onDelete(event.id)
         onClose()
       }
@@ -118,12 +139,15 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
+              readOnly={isVirtual && scope === 'this'}
               className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2"
               style={{
                 background: '#1e2d40',
                 border: '1px solid #243447',
                 color: '#e2e8f0',
                 colorScheme: 'dark',
+                opacity: isVirtual && scope === 'this' ? 0.6 : 1,
+                cursor: isVirtual && scope === 'this' ? 'default' : 'auto',
               }}
             />
           </div>
@@ -197,14 +221,32 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
             )}
           </div>
 
-          {/* Recurring event notice */}
+          {/* Recurring event: scope toggle */}
           {isVirtual && (
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#94a3b8' }}
-            >
-              <RotateCcw size={12} className="shrink-0" style={{ color: '#d4af37' }} />
-              Changes to this recurring event will apply to <strong className="text-slate-300">all occurrences</strong>.
+            <div style={{ background: '#0d1224', border: '1px solid #243447', borderRadius: 8, padding: '10px 12px' }}>
+              <p className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Edit scope</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setScope('this')}
+                  className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                  style={scope === 'this'
+                    ? { background: '#d4af37', color: '#111827', border: '1px solid #d4af37' }
+                    : { background: 'transparent', color: '#94a3b8', border: '1px solid #243447' }}
+                >
+                  This date only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScope('all')}
+                  className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                  style={scope === 'all'
+                    ? { background: '#d4af37', color: '#111827', border: '1px solid #d4af37' }
+                    : { background: 'transparent', color: '#94a3b8', border: '1px solid #243447' }}
+                >
+                  All occurrences
+                </button>
+              </div>
             </div>
           )}
 
@@ -227,7 +269,8 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
             />
           </div>
 
-          {/* Recurrence */}
+          {/* Recurrence — hidden when editing a single instance */}
+          {!(isVirtual && scope === 'this') && (
           <div>
             <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
               <RotateCcw size={11} />
@@ -271,6 +314,7 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
               </div>
             )}
           </div>
+          )}
 
         </div>
         {/* Sticky action footer — outside scroll area, respects safe-area-inset-bottom */}
@@ -278,7 +322,7 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
           className="shrink-0 flex gap-3 px-6 py-4"
           style={{ borderTop: '1px solid #1e2d40', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
-          {isEdit && onDelete && (
+          {isEdit && (onDelete || isVirtual) && (
             <button
               type="button"
               onClick={handleDelete}
@@ -286,7 +330,7 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
               style={{ color: '#f87171', border: '1px solid #991b1b' }}
             >
               <Trash2 size={14} />
-              Delete
+              {isVirtual && scope === 'this' ? 'Skip this date' : 'Delete all'}
             </button>
           )}
           <div className="flex-1" />
@@ -303,7 +347,7 @@ export function EventModal({ event, defaultDate, onSave, onDelete, onClose }: Pr
             style={{ background: '#d4af37', color: '#111827' }}
           >
             <Save size={14} />
-            {isEdit ? 'Update' : 'Add Event'}
+            {!isEdit ? 'Add Event' : isVirtual && scope === 'this' ? 'Save this date' : 'Update all'}
           </button>
         </div>
         </form>

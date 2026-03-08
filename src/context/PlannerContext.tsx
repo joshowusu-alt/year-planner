@@ -53,6 +53,8 @@ import {
   deleteVitalFew,
   createWeeklyReview,
   updateWeeklyReview,
+  updateEventInstance,
+  deleteEventOccurrence,
 } from '../lib/storage'
 
 // ─── Context type ─────────────────────────────────────────────────────────────
@@ -63,6 +65,8 @@ interface PlannerContextValue {
   addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule) => void
   editEvent: (id: string, patch: Partial<PlannerEvent>) => void
   removeEvent: (id: string) => void
+  editEventInstance: (baseId: string, dateStr: string, patch: { title?: string; category?: string; notes?: string }) => void
+  removeEventOccurrence: (baseId: string, dateStr: string) => void
   getEventsForDate: (dateStr: string) => PlannerEvent[]
   // Month themes
   setMonthTheme: (month: number, year: number, theme: string) => void
@@ -194,14 +198,27 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setStore((s) => deleteEvent(s, getBaseEventId(id)))
   }, [])
 
+  const editEventInstance = useCallback((
+    baseId: string,
+    dateStr: string,
+    patch: { title?: string; category?: string; notes?: string }
+  ) => {
+    setStore((s) => updateEventInstance(s, baseId, dateStr, patch))
+  }, [])
+
+  const removeEventOccurrence = useCallback((baseId: string, dateStr: string) => {
+    setStore((s) => deleteEventOccurrence(s, baseId, dateStr))
+  }, [])
+
   const getEventsForDate = useCallback((dateStr: string): PlannerEvent[] => {
     return store.events
       .filter((ev) => isRecurringOnDate(ev, dateStr))
-      .map((ev) =>
-        ev.recurrence?.type && ev.recurrence.type !== 'none' && ev.date !== dateStr
-          ? { ...ev, id: `${ev.id}__${dateStr}`, date: dateStr }
-          : ev
-      )
+      .map((ev) => {
+        const isVirtualOccurrence = ev.recurrence?.type && ev.recurrence.type !== 'none' && ev.date !== dateStr
+        if (!isVirtualOccurrence) return ev
+        const override = ev.instanceOverrides?.[dateStr]
+        return { ...ev, ...(override ?? {}), id: `${ev.id}__${dateStr}`, date: dateStr }
+      })
   }, [store.events])
 
   const setMonthTheme = useCallback((month: number, year: number, theme: string) => {
@@ -315,7 +332,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   return (
     <PlannerContext.Provider value={{
       store,
-      addEvent, editEvent, removeEvent, getEventsForDate, setMonthTheme,
+      addEvent, editEvent, removeEvent, editEventInstance, removeEventOccurrence, getEventsForDate, setMonthTheme,
       addGoal, editGoal, removeGoal,
       addMilestoneToGoal, editMilestone, removeMilestone,
       addTask, editTask, removeTask, toggleTask,
