@@ -38,7 +38,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Missing env vars', supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey, vapidPublic: !!vapidPublic, vapidPrivate: !!vapidPrivate })
     }
 
-    webpush.setVapidDetails('mailto:admin@stratum.app', vapidPublic, vapidPrivate)
+    webpush.setVapidDetails(
+      'mailto:admin@stratum.app',
+      // strip any accidental padding/whitespace — web-push requires bare base64url
+      vapidPublic.trim().replace(/=+$/, ''),
+      vapidPrivate.trim().replace(/=+$/, '')
+    )
 
   // Allow GET (for cron) and POST (for manual trigger)
   const supabase = createClient(supabaseUrl, supabaseKey)
@@ -82,8 +87,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (isNaN(eventDateTime.getTime())) continue
 
       const fireAt = eventDateTime.getTime() - ev.reminder * 60_000
-      // Fire if within this minute's window (now to now+60s)
-      if (fireAt < now || fireAt > now + 60_000) continue
+      // Fire if within a ±90 second window around the cron tick to handle timing drift
+      if (Math.abs(fireAt - now) > 90_000) continue
 
       const body = ev.reminder === 0
         ? 'Starting now'
