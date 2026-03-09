@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react'
 import { Save, Upload, Plus, Trash2, Pencil, X, RotateCcw, Share2, Bell, BellOff, BellRing } from 'lucide-react'
 import { requestNotificationPermission } from '../lib/notifications'
-import { subscribeToPush, unsubscribeFromPush, getPushStatus, type PushStatus } from '../lib/pushSub'
+import { subscribeToPush, unsubscribeFromPush, getPushStatus, isIOS, isStandalonePWA, type PushStatus } from '../lib/pushSub'
 import { usePlanner } from '../context/PlannerContext'
 import type { EventCategoryDef } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
@@ -29,6 +29,7 @@ export function SettingsPage() {
   )
   const [testSent, setTestSent] = useState(false)
   const [pushStatus, setPushStatus] = useState<PushStatus>('loading')
+  const [pushError, setPushError] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof Notification !== 'undefined') setNotifPerm(Notification.permission)
@@ -39,15 +40,26 @@ export function SettingsPage() {
   }, [])
 
   async function handleEnablePush() {
-    // First ensure notification permission
+    setPushError(null)
+    // iOS Safari (non-installed) doesn't support push — guide user to install first
+    if (isIOS() && !isStandalonePWA()) {
+      setPushError('IOS_NOT_INSTALLED')
+      setPushStatus('unsubscribed')
+      return
+    }
     if (Notification.permission !== 'granted') {
       const perm = await requestNotificationPermission()
       setNotifPerm(perm)
       if (perm !== 'granted') return
     }
     setPushStatus('loading')
-    const ok = await subscribeToPush(user?.id)
-    setPushStatus(ok ? 'subscribed' : 'unsubscribed')
+    const result = await subscribeToPush(user?.id)
+    if (result.ok) {
+      setPushStatus('subscribed')
+    } else {
+      setPushStatus('unsubscribed')
+      setPushError(result.error ?? 'UNKNOWN')
+    }
   }
 
   async function handleDisablePush() {
@@ -412,15 +424,31 @@ export function SettingsPage() {
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleEnablePush}
-                  disabled={pushStatus === 'loading'}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90 disabled:opacity-50"
-                  style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
-                >
-                  <BellRing size={14} /> {pushStatus === 'loading' ? 'Checking…' : 'Enable Background Push'}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={handleEnablePush}
+                    disabled={pushStatus === 'loading'}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+                    style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37', opacity: pushStatus === 'loading' ? 0.5 : 1, minHeight: '44px', cursor: pushStatus === 'loading' ? 'wait' : 'pointer' }}
+                  >
+                    <BellRing size={14} /> {pushStatus === 'loading' ? 'Checking…' : 'Enable Background Push'}
+                  </button>
+                  {pushError === 'IOS_NOT_INSTALLED' && (
+                    <p className="mt-2 text-xs" style={{ color: '#f59e0b' }}>
+                      📱 On iPhone/iPad, you must <strong>add STRATUM to your Home Screen</strong> first, then open it from there and try again.
+                    </p>
+                  )}
+                  {pushError && pushError !== 'IOS_NOT_INSTALLED' && (
+                    <p className="mt-2 text-xs" style={{ color: '#f87171' }}>
+                      {pushError === 'PERMISSION_DENIED'
+                        ? 'Permission denied — check browser notification settings.'
+                        : pushError === 'SW_TIMEOUT'
+                        ? 'Service worker timed out — try refreshing the page.'
+                        : `Failed: ${pushError}`}
+                    </p>
+                  )}
+                </>
               )}
               <p className="text-xs mt-2" style={{ color: '#475569' }}>
                 Requires Supabase + cron job (/api/send-reminders every minute via cron-job.org).
