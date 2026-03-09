@@ -1,7 +1,9 @@
 /** Converts a base64url VAPID public key to a Uint8Array for PushManager */
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  // trim any accidental whitespace or quotes that may have been set in env
+  const clean = base64String.trim().replace(/^"|"$/g, '')
+  const padding = '='.repeat((4 - (clean.length % 4)) % 4)
+  const base64 = (clean + padding).replace(/-/g, '+').replace(/_/g, '/')
   const rawData = atob(base64)
   return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)))
 }
@@ -45,10 +47,13 @@ export async function getPushStatus(): Promise<PushStatus> {
 
 export async function subscribeToPush(userId?: string): Promise<{ ok: boolean; error?: string }> {
   try {
+    const vapidKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined)?.trim()
+    if (!vapidKey) {
+      console.error('VITE_VAPID_PUBLIC_KEY is not set')
+      return { ok: false, error: 'VAPID key not configured — contact support.' }
+    }
     const reg = await swReady()
-    const applicationServerKey = urlBase64ToUint8Array(
-      import.meta.env.VITE_VAPID_PUBLIC_KEY as string
-    )
+    const applicationServerKey = urlBase64ToUint8Array(vapidKey)
     const subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey,
