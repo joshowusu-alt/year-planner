@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PlannerProvider } from './context/PlannerContext'
 import { usePlanner } from './context/PlannerContext'
+import { UndoContext } from './context/UndoContext'
+import { useUndoToast } from './hooks/useUndoToast'
 import { Sidebar, type Page } from './components/layout/Sidebar'
 import { MobileHeader } from './components/layout/MobileHeader'
 import { NaturalLanguageInput } from './components/NaturalLanguageInput'
@@ -27,6 +29,7 @@ function AppShell() {
   const { user, loading } = useAuth()
   const { addEvent } = usePlanner()
   useReminders()
+  const { pushUndo, toastNode } = useUndoToast()
   const [page, setPage] = useState<Page>('planner')
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -85,6 +88,7 @@ function AppShell() {
   }
 
   return (
+    <UndoContext.Provider value={{ pushUndo }}>
     <div className="flex flex-col w-full max-w-full overflow-x-hidden md:flex-row" style={{ background: '#0a0e1a', color: '#e2e8f0', height: '100%' }}>
       {/* Desktop / Tablet sidebar */}
       <div className="hidden md:block">
@@ -150,7 +154,9 @@ function AppShell() {
           }}
         />
       )}
+      {toastNode}
     </div>
+    </UndoContext.Provider>
   )
 }
 

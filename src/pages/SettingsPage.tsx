@@ -317,7 +317,7 @@ export function SettingsPage() {
               <button
                 type="button"
                 onClick={() => setShowShareModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all hover:opacity-90 w-full sm:w-auto"
                 style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
               >
                 <Share2 size={14} /> Manage Share Links

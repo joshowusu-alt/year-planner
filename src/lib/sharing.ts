@@ -123,3 +123,19 @@ export async function fetchSharedPlannerData(
     return null
   }
 }
+
+/**
+ * Checks whether the planner_shares table exists.
+ * Returns 'exists' | 'missing' | 'unknown'
+ */
+export async function checkSharesTableExists(): Promise<'exists' | 'missing' | 'unknown'> {
+  if (!supabase) return 'unknown'
+  try {
+    const { error } = await supabase.from('planner_shares').select('token').limit(1)
+    if (!error) return 'exists'
+    if (error.code === '42P01') return 'missing'
+    return 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}

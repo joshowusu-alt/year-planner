@@ -9,11 +9,12 @@ import { addDays, format, subDays, isToday } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, CheckSquare, Square, GripVertical, LayoutList, Clock } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import type { PlannerEvent, RecurrenceRule } from '../../types'
-import { PRIORITY_COLORS, getCategoryStyle } from '../../types'
+import { PRIORITY_COLORS, getCategoryStyle, getBaseEventId } from '../../types'
 import { EventModal } from '../planner/EventModal'
 import { EventBottomSheet } from '../planner/EventBottomSheet'
 import { useBreakpoint } from '../../hooks/useMediaQuery'
 import { WeeklyTimeGrid } from './WeeklyTimeGrid'
+import { useUndo } from '../../context/UndoContext'
 
 // ── DnD sub-components ────────────────────────────────────────────────────────
 
@@ -88,6 +89,8 @@ export function WeeklyView() {
     currentWeekStart, setCurrentWeekStart,
   } = usePlanner()
 
+  const { pushUndo } = useUndo()
+
   const [modalDate, setModalDate] = useState<string | null>(null)
   const [editingEvent, setEditingEvent] = useState<PlannerEvent | null>(null)
   const [newTaskDate, setNewTaskDate] = useState<string | null>(null)
@@ -145,6 +148,20 @@ export function WeeklyView() {
     }
   }
 
+  function handleDelete(id: string) {
+    const baseId = getBaseEventId(id)
+    const event = store.events.find((e) => e.id === baseId)
+    removeEvent(id)
+    if (event) {
+      pushUndo({
+        label: `"${event.title}" deleted`,
+        undo: () => {
+          addEvent(event.date, event.title, event.category, event.notes, event.recurrence, event.startTime, event.endTime, event.reminder)
+        },
+      })
+    }
+  }
+
   function handleAddTask(date: string) {
     if (!newTaskTitle.trim()) { setNewTaskDate(null); return }
     addTask({
@@ -169,8 +186,13 @@ export function WeeklyView() {
     setActiveEventId(null)
     if (!over) return
     const sourceDateStr = (active.data.current as { type: string; dateStr: string } | undefined)?.dateStr
-    if (sourceDateStr !== (over.id as string)) {
-      editEvent(active.id as string, { date: over.id as string })
+    const targetDateStr = over.id as string
+    if (sourceDateStr !== targetDateStr) {
+      editEvent(active.id as string, { date: targetDateStr })
+      pushUndo({
+        label: `Event moved to ${targetDateStr}`,
+        undo: () => editEvent(active.id as string, { date: sourceDateStr! }),
+      })
     }
   }
 
@@ -454,7 +476,7 @@ export function WeeklyView() {
           event={editingEvent}
           defaultDate={modalDate ?? undefined}
           onSave={handleSave}
-          onDelete={removeEvent}
+          onDelete={handleDelete}
           onClose={() => { setModalDate(null); setEditingEvent(null) }}
         />
       )}

@@ -20,10 +20,11 @@ import {
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import type { PlannerEvent, RecurrenceRule } from '../../types'
-import { MONTH_NAMES, getCategoryStyle } from '../../types'
+import { MONTH_NAMES, getCategoryStyle, getBaseEventId } from '../../types'
 import { EventModal } from '../planner/EventModal'
 import { EventBottomSheet } from '../planner/EventBottomSheet'
 import { useBreakpoint } from '../../hooks/useMediaQuery'
+import { useUndo } from '../../context/UndoContext'
 
 interface DayCellProps {
   date: Date
@@ -158,6 +159,8 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
 export function MonthlyCalendar() {
   const { store, addEvent, editEvent, removeEvent, getEventsForDate, currentYear, currentMonth, setCurrentMonth, setCurrentYear } = usePlanner()
 
+  const { pushUndo } = useUndo()
+
   const [modalDate, setModalDate] = useState<string | null>(null)
   const [editingEvent, setEditingEvent] = useState<PlannerEvent | null>(null)
   const [bottomSheetDate, setBottomSheetDate] = useState<string | null>(null)
@@ -203,6 +206,20 @@ export function MonthlyCalendar() {
     }
   }
 
+  function handleDelete(id: string) {
+    const baseId = getBaseEventId(id)
+    const event = store.events.find((e) => e.id === baseId)
+    removeEvent(id)
+    if (event) {
+      pushUndo({
+        label: `"${event.title}" deleted`,
+        undo: () => {
+          addEvent(event.date, event.title, event.category, event.notes, event.recurrence, event.startTime, event.endTime, event.reminder)
+        },
+      })
+    }
+  }
+
   function handleDragStart(evt: DragStartEvent) {
     if (isMobile) return
     setActiveEventId(evt.active.id as string)
@@ -213,8 +230,13 @@ export function MonthlyCalendar() {
     setActiveEventId(null)
     if (!over || isMobile) return
     const sourceDateStr = (active.data.current as { type: string; dateStr: string } | undefined)?.dateStr
-    if (sourceDateStr !== (over.id as string)) {
-      editEvent(active.id as string, { date: over.id as string })
+    const targetDateStr = over.id as string
+    if (sourceDateStr !== targetDateStr) {
+      editEvent(active.id as string, { date: targetDateStr })
+      pushUndo({
+        label: `Event moved to ${targetDateStr}`,
+        undo: () => editEvent(active.id as string, { date: sourceDateStr! }),
+      })
     }
   }
 
@@ -327,7 +349,7 @@ export function MonthlyCalendar() {
           event={editingEvent}
           defaultDate={modalDate ?? undefined}
           onSave={handleSave}
-          onDelete={removeEvent}
+          onDelete={handleDelete}
           onClose={() => { setModalDate(null); setEditingEvent(null) }}
         />
       )}

@@ -7,11 +7,12 @@ import { addDays, format, isToday, subDays } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import type { PlannerEvent, RecurrenceRule } from '../../types'
-import { getCategoryStyle } from '../../types'
+import { getCategoryStyle, getBaseEventId } from '../../types'
 import { EventModal } from './EventModal'
 import { useBreakpoint } from '../../hooks/useMediaQuery'
 import { DndContext, DragOverlay, useDraggable, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragMoveEvent } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
+import { useUndo } from '../../context/UndoContext'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -133,9 +134,10 @@ interface EventBlockProps {
   pe: PositionedEvent
   onClick: (ev: PlannerEvent) => void
   categories: import('../../types').EventCategoryDef[]
+  isMobile: boolean
 }
 
-function EventBlock({ pe, onClick, categories }: EventBlockProps) {
+function EventBlock({ pe, onClick, categories, isMobile }: EventBlockProps) {
   const { event, top, height, column, columnCount } = pe
   const catStyle = getCategoryStyle(event.category, categories)
   const leftPct = (column / columnCount) * 100
@@ -147,15 +149,17 @@ function EventBlock({ pe, onClick, categories }: EventBlockProps) {
     data: { type: 'event', startTime: event.startTime, dateStr: event.date },
   })
 
+  // On mobile, don't attach drag listeners — keep events tappable
+  const dragProps = isMobile ? {} : { ...listeners, ...attributes }
+
   return (
     <div
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      className="absolute overflow-hidden cursor-grab active:cursor-grabbing select-none"
+      {...dragProps}
+      className={`absolute overflow-hidden select-none ${isMobile ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
       style={{
         top,
-        height: Math.max(height, 28),
+        height: Math.max(height, isMobile ? 36 : 28),
         left: `${leftPct}%`,
         width: `${widthPct}%`,
         paddingLeft: 3,
@@ -163,7 +167,8 @@ function EventBlock({ pe, onClick, categories }: EventBlockProps) {
         zIndex: isDragging ? 0 : 10,
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.25 : 1,
-        touchAction: 'none',
+        touchAction: isMobile ? 'auto' : 'none',
+        fontSize: isMobile ? 11 : undefined,
       }}
       onClick={(e) => { e.stopPropagation(); onClick(event) }}
     >
@@ -204,6 +209,8 @@ export function WeeklyTimeGrid() {
     setCurrentWeekStart,
   } = usePlanner()
 
+  const { pushUndo } = useUndo()
+
   const { isMobile } = useBreakpoint()
   const scrollRef = useRef<HTMLDivElement>(null)
   const nowLineRef = useRef<HTMLDivElement>(null)
@@ -213,6 +220,10 @@ export function WeeklyTimeGrid() {
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [snapLineY, setSnapLineY] = useState<number | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  // Scroll-aware drag tracking
+  const dragStartScrollTopRef = useRef<number>(0)
+  const autoScrollRafRef = useRef<number | null>(null)
 
   // Week days
   const weekStart = new Date(currentWeekStart)
@@ -335,6 +346,20 @@ export function WeeklyTimeGrid() {
     }
   }
 
+  function handleDeleteEvent(id: string) {
+    const baseId = getBaseEventId(id)
+    const event = store.events.find((e) => e.id === baseId)
+    removeEvent(id)
+    if (event) {
+      pushUndo({
+        label: `"${event.title}" deleted`,
+        undo: () => {
+          addEvent(event.date, event.title, event.category, event.notes, event.recurrence, event.startTime, event.endTime, event.reminder)
+        },
+      })
+    }
+  }
+
   function closeModal() {
     setEditingEvent(null)
     setModalDate(null)
@@ -342,6 +367,24 @@ export function WeeklyTimeGrid() {
   }
 
   // ── Time-grid DnD ─────────────────────────────────────────────────────────
+
+  function startAutoScroll(direction: 'up' | 'down') {
+    if (autoScrollRafRef.current) return
+    function step() {
+      const el = scrollRef.current
+      if (!el) return
+      el.scrollTop += direction === 'down' ? 6 : -6
+      autoScrollRafRef.current = requestAnimationFrame(step)
+    }
+    autoScrollRafRef.current = requestAnimationFrame(step)
+  }
+
+  function stopAutoScroll() {
+    if (autoScrollRafRef.current !== null) {
+      cancelAnimationFrame(autoScrollRafRef.current)
+      autoScrollRafRef.current = null
+    }
+  }
 
   const computeDropTarget = useCallback((translated: { left: number; top: number; width: number; height: number }) => {
     const el = gridBodyRef.current
@@ -363,34 +406,68 @@ export function WeeklyTimeGrid() {
     const { active } = evt
     setActiveDragId(null)
     setSnapLineY(null)
+    stopAutoScroll()
     if (isMobile) return
-    const translated = active.rect.current.translated
-    if (!translated) return
-    const target = computeDropTarget(translated)
+    const el = gridBodyRef.current
+    if (!el) return
+    const scrollEl = scrollRef.current
+    const currentScroll = scrollEl?.scrollTop ?? 0
+    const initialRect = active.rect.current.initial
+    if (!initialRect) return
+    const scrollDelta = currentScroll - dragStartScrollTopRef.current
+    const currentTop = initialRect.top + evt.delta.y + scrollDelta
+    const currentLeft = initialRect.left + evt.delta.x
+    const target = computeDropTarget({ left: currentLeft, top: currentTop, width: initialRect.width, height: initialRect.height })
     if (!target) return
     const { dayIndex, snappedMinutes } = target
     const targetDate = visibleDays[dayIndex]
     const sourceEvent = store.events.find((e) => e.id === active.id)
     if (!sourceEvent) return
+    const originalDate = sourceEvent.date
+    const originalStart = sourceEvent.startTime
+    const originalEnd = sourceEvent.endTime
     let newEndTime = sourceEvent.endTime
     if (sourceEvent.startTime && sourceEvent.endTime) {
       const duration = timeToMinutes(sourceEvent.endTime) - timeToMinutes(sourceEvent.startTime)
       newEndTime = minutesToTimeStr(Math.min(24 * 60 - 1, snappedMinutes + duration))
     }
+    const newDate = format(targetDate, 'yyyy-MM-dd')
+    const newStartTime = minutesToTimeStr(snappedMinutes)
     editEvent(active.id as string, {
-      date: format(targetDate, 'yyyy-MM-dd'),
-      startTime: minutesToTimeStr(snappedMinutes),
+      date: newDate,
+      startTime: newStartTime,
       endTime: newEndTime,
+    })
+    pushUndo({
+      label: 'Event rescheduled',
+      undo: () => editEvent(active.id as string, { date: originalDate, startTime: originalStart, endTime: originalEnd }),
     })
   }
 
   function handleTimeGridDragMove(evt: DragMoveEvent) {
     if (isMobile) return
-    const translated = evt.active.rect.current.translated
-    if (!translated) return
-    const target = computeDropTarget(translated)
+    const el = gridBodyRef.current
+    if (!el) return
+    const scrollEl = scrollRef.current
+    const currentScroll = scrollEl?.scrollTop ?? 0
+    const initialRect = evt.active.rect.current.initial
+    if (!initialRect) return
+    const scrollDelta = currentScroll - dragStartScrollTopRef.current
+    const currentTop = initialRect.top + evt.delta.y + scrollDelta
+    const currentLeft = initialRect.left + evt.delta.x
+    const target = computeDropTarget({ left: currentLeft, top: currentTop, width: initialRect.width, height: initialRect.height })
     if (!target) return
     setSnapLineY(minutesToPx(target.snappedMinutes))
+
+    // Auto-scroll near edges
+    const scrollRect = scrollEl?.getBoundingClientRect()
+    if (scrollRect) {
+      const relativeToScroll = currentTop - scrollRect.top
+      const scrollHeight = scrollRect.height
+      if (relativeToScroll < 60) startAutoScroll('up')
+      else if (relativeToScroll > scrollHeight - 60) startAutoScroll('down')
+      else stopAutoScroll()
+    }
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -406,13 +483,19 @@ export function WeeklyTimeGrid() {
   return (
     <DndContext
       sensors={!isMobile ? sensors : []}
-      onDragStart={(e) => { if (!isMobile) setActiveDragId(e.active.id as string) }}
+      onDragStart={(e) => {
+        if (!isMobile) {
+          setActiveDragId(e.active.id as string)
+          dragStartScrollTopRef.current = scrollRef.current?.scrollTop ?? 0
+        }
+      }}
       onDragMove={handleTimeGridDragMove}
       onDragEnd={handleTimeGridDragEnd}
+      onDragCancel={() => { setActiveDragId(null); setSnapLineY(null); stopAutoScroll() }}
     >
     <div
       className="flex flex-col flex-1 overflow-hidden"
-      style={{ background: '#0a0e1a' }}
+      style={{ background: '#0a0e1a', overflowX: 'hidden' }}
     >
       {/* Mobile day navigator */}
       {isMobile && (
@@ -422,7 +505,7 @@ export function WeeklyTimeGrid() {
         >
           <button
             onClick={() => navigateDay(-1)}
-            className="p-1.5 rounded-lg hover:bg-white/10"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/10"
           >
             <ChevronLeft size={16} className="text-slate-400" />
           </button>
@@ -444,7 +527,7 @@ export function WeeklyTimeGrid() {
           </div>
           <button
             onClick={() => navigateDay(1)}
-            className="p-1.5 rounded-lg hover:bg-white/10"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/10"
           >
             <ChevronRight size={16} className="text-slate-400" />
           </button>
@@ -485,7 +568,7 @@ export function WeeklyTimeGrid() {
                   }}
                 >
                   {/* Day label row */}
-                  <div className="flex flex-col items-center py-2 gap-0.5">
+                  <div className="flex flex-col items-center py-3 gap-0.5">
                     <span
                       className={`text-xs font-bold uppercase tracking-wider ${
                         sunday ? 'text-red-400' : 'text-slate-500'
@@ -652,6 +735,7 @@ export function WeeklyTimeGrid() {
                       pe={pe}
                       onClick={handleEditEvent}
                       categories={store.categories}
+                      isMobile={isMobile}
                     />
                   ))}
                 </div>
@@ -685,7 +769,7 @@ export function WeeklyTimeGrid() {
           defaultDate={modalDate ?? undefined}
           defaultStartTime={modalStartTime}
           onSave={handleSave}
-          onDelete={removeEvent}
+          onDelete={handleDeleteEvent}
           onClose={closeModal}
         />
       )}

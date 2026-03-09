@@ -65,7 +65,7 @@ function ReadOnlyMonthCard({ year, month, events, categories }: MonthCardProps) 
                 style={{ background: getCategoryColor(ev.category, categories) }}
               />
               <span
-                className="text-xs truncate"
+                className="text-xs truncate line-clamp-1"
                 style={{ color: '#e2e8f0' }}
                 title={ev.title}
               >
@@ -136,7 +136,7 @@ export function SharedPlannerView({ token, onClose }: Props) {
         </div>
         <button
           onClick={onClose}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/10 transition-colors shrink-0 ml-3"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/10 transition-colors shrink-0 ml-3 min-w-11 min-h-11"
           style={{ color: '#e2e8f0', border: '1px solid #243447' }}
         >
           <X size={13} /> Close
@@ -144,7 +144,7 @@ export function SharedPlannerView({ token, onClose }: Props) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
             <Loader2 size={28} className="animate-spin" style={{ color: '#d4af37' }} />
@@ -191,7 +191,7 @@ export function SharedPlannerView({ token, onClose }: Props) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setYear((y) => y - 1)}
-                  className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-center p-2 rounded-lg hover:bg-white/5 transition-colors min-w-11 min-h-11"
                   style={{ border: '1px solid #1e2d40', color: '#94a3b8' }}
                   aria-label="Previous year"
                 >
@@ -205,7 +205,7 @@ export function SharedPlannerView({ token, onClose }: Props) {
                 </span>
                 <button
                   onClick={() => setYear((y) => y + 1)}
-                  className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-center p-2 rounded-lg hover:bg-white/5 transition-colors min-w-11 min-h-11"
                   style={{ border: '1px solid #1e2d40', color: '#94a3b8' }}
                   aria-label="Next year"
                 >
