@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, type FormEvent } from 'react'
-import { X, Trash2, Save, RotateCcw, ChevronDown, Clock, Bell } from 'lucide-react'
+import { X, Trash2, Save, RotateCcw, ChevronDown, Clock, Bell, AlertTriangle } from 'lucide-react'
+import { canShowNotifications } from '../../lib/notifications'
 import type { PlannerEvent, RecurrenceRule, RecurrenceType } from '../../types'
 import { RECURRENCE_LABELS, getBaseEventId } from '../../types'
 import { usePlanner } from '../../context/PlannerContext'
@@ -351,6 +352,12 @@ export function EventModal({ event, defaultDate, defaultStartTime, onSave, onDel
                   <option value="120">2 hours before</option>
                   <option value="1440">1 day before</option>
                 </select>
+                {reminder !== null && !canShowNotifications() && (
+                  <p className="mt-1.5 flex items-center gap-1 text-xs" style={{ color: '#f59e0b' }}>
+                    <AlertTriangle size={10} />
+                    Notifications not enabled — go to Settings to allow them.
+                  </p>
+                )}
               </div>
             )}
           </div>

@@ -1,5 +1,6 @@
-import { useState, type FormEvent, type ChangeEvent } from 'react'
-import { Save, Upload, Plus, Trash2, Pencil, X, RotateCcw, Share2 } from 'lucide-react'
+import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react'
+import { Save, Upload, Plus, Trash2, Pencil, X, RotateCcw, Share2, Bell, BellOff, BellRing } from 'lucide-react'
+import { requestNotificationPermission } from '../lib/notifications'
 import { usePlanner } from '../context/PlannerContext'
 import type { EventCategoryDef } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
@@ -22,6 +23,27 @@ export function SettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+  )
+  const [testSent, setTestSent] = useState(false)
+
+  useEffect(() => {
+    if (typeof Notification !== 'undefined') setNotifPerm(Notification.permission)
+  }, [])
+
+  async function handleEnableNotifications() {
+    const result = await requestNotificationPermission()
+    setNotifPerm(result)
+  }
+
+  function handleTestNotification() {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification('STRATUM Reminder', { body: 'Test notification — reminders are working!', icon: '/icon.svg' })
+      setTestSent(true)
+      setTimeout(() => setTestSent(false), 3000)
+    }
+  }
 
   // Category state
   const [editingCatId, setEditingCatId] = useState<string | null>(null)
@@ -301,6 +323,46 @@ export function SettingsPage() {
             >
               <Plus size={12} /> Add
             </button>
+          </div>
+        </section>
+
+        {/* Notifications */}
+        <section>
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Notifications</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              {notifPerm === 'granted' ? (
+                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#34d399' }}>
+                  <Bell size={13} /> Notifications enabled
+                </span>
+              ) : notifPerm === 'denied' ? (
+                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#f87171' }}>
+                  <BellOff size={13} /> Blocked — enable in your browser/OS settings
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleEnableNotifications}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+                  style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
+                >
+                  <Bell size={14} /> Enable Notifications
+                </button>
+              )}
+              {notifPerm === 'granted' && (
+                <button
+                  type="button"
+                  onClick={handleTestNotification}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
+                  style={{ background: '#1e2d40', color: testSent ? '#34d399' : '#94a3b8', border: '1px solid #243447' }}
+                >
+                  <BellRing size={12} /> {testSent ? 'Sent!' : 'Send test'}
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-slate-600">
+              Reminders fire while STRATUM is open in your browser. Set a start time on an event, then choose a reminder — the notification fires that many minutes before.
+            </p>
           </div>
         </section>
 

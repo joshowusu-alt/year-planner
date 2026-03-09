@@ -244,6 +244,10 @@ function GoalCard({ goal }: { goal: Goal }) {
 
   const completedMilestones = goal.milestones.filter((m) => m.completed).length
   const totalMilestones = goal.milestones.length
+  // Auto-derive progress from milestones when they exist; fall back to manual value
+  const effectiveProgress = totalMilestones > 0
+    ? Math.round((completedMilestones / totalMilestones) * 100)
+    : goal.progress
 
   return (
     <>
@@ -289,24 +293,16 @@ function GoalCard({ goal }: { goal: Goal }) {
           {/* Progress */}
           <div className="mt-3 space-y-1">
             <div className="flex justify-between items-center">
-              <span className="text-xs text-slate-500">Progress</span>
-              <span className="text-xs font-bold" style={{ color: '#d4af37' }}>{goal.progress}%</span>
+              <span className="text-xs text-slate-500">
+                Progress
+                {totalMilestones > 0 && (
+                  <span className="ml-1.5 text-slate-600">· {completedMilestones}/{totalMilestones} milestones</span>
+                )}
+              </span>
+              <span className="text-xs font-bold" style={{ color: '#d4af37' }}>{effectiveProgress}%</span>
             </div>
-            <ProgressBar value={goal.progress} />
+            <ProgressBar value={effectiveProgress} />
           </div>
-
-          {/* Milestones + tasks summary */}
-          {totalMilestones > 0 && (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#1e2d40' }}>
-                <div
-                  className="h-full bg-green-500 rounded-full transition-all"
-                  style={{ width: `${(completedMilestones / totalMilestones) * 100}%` }}
-                />
-              </div>
-              <span className="text-xs text-slate-500">{completedMilestones}/{totalMilestones} milestones</span>
-            </div>
-          )}
           {linkedTasks.length > 0 && (
             <div className="mt-1.5 flex items-center gap-1.5">
               <Square size={10} className="text-blue-400" />
@@ -323,7 +319,12 @@ function GoalCard({ goal }: { goal: Goal }) {
                 <MilestoneRow
                   key={m.id}
                   milestone={m}
-                  onToggle={() => editMilestone(goal.id, m.id, { completed: !m.completed })}
+                  onToggle={() => {
+                    const willBeCompleted = !m.completed
+                    const newCompleted = completedMilestones + (willBeCompleted ? 1 : -1)
+                    editMilestone(goal.id, m.id, { completed: willBeCompleted })
+                    editGoal(goal.id, { progress: Math.round((newCompleted / totalMilestones) * 100) })
+                  }}
                   onDelete={() => removeMilestone(goal.id, m.id)}
                 />
               ))}
