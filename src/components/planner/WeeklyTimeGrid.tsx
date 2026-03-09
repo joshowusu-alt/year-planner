@@ -505,6 +505,8 @@ export function WeeklyTimeGrid() {
         >
           <button
             onClick={() => navigateDay(-1)}
+            aria-label="Previous day"
+            title="Previous day"
             className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/10"
           >
             <ChevronLeft size={16} className="text-slate-400" />
@@ -527,6 +529,8 @@ export function WeeklyTimeGrid() {
           </div>
           <button
             onClick={() => navigateDay(1)}
+            aria-label="Next day"
+            title="Next day"
             className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/10"
           >
             <ChevronRight size={16} className="text-slate-400" />

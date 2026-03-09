@@ -1,4 +1,4 @@
-import { useState, useMemo, type FormEvent } from 'react'
+import { useState, useMemo, useEffect, type FormEvent } from 'react'
 import { X, Trash2, Save, RotateCcw, ChevronDown, Clock, Bell } from 'lucide-react'
 import type { PlannerEvent, RecurrenceRule, RecurrenceType } from '../../types'
 import { RECURRENCE_LABELS, getBaseEventId } from '../../types'
@@ -51,6 +51,15 @@ export function EventModal({ event, defaultDate, defaultStartTime, onSave, onDel
 
   // If editing a virtual occurrence, show the base id for context
   const isVirtual = Boolean(event && event.id.includes('__'))
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   // Sort categories by event usage frequency (most used first)
   const sortedCategories = useMemo(() => {
@@ -115,6 +124,9 @@ export function EventModal({ event, defaultDate, defaultStartTime, onSave, onDel
     >
       <div
         className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="event-modal-title"
         style={{
           background: '#111827',
           border: '1px solid #1e2d40',
@@ -126,12 +138,13 @@ export function EventModal({ event, defaultDate, defaultStartTime, onSave, onDel
           className="flex items-center justify-between px-6 py-4 rounded-t-2xl sm:rounded-t-xl shrink-0"
           style={{ borderBottom: '1px solid #1e2d40' }}
         >
-          <h2 className="text-lg font-bold tracking-wide" style={{ color: '#d4af37' }}>
+          <h2 id="event-modal-title" className="text-lg font-bold tracking-wide" style={{ color: '#d4af37' }}>
             {isEdit ? 'Edit Event' : 'Add New Event'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-white/10 transition-colors"
+            aria-label="Close"
+            className="focus-ring p-1 rounded-lg hover:bg-white/10 transition-colors"
           >
             <X size={18} className="text-slate-400" />
           </button>

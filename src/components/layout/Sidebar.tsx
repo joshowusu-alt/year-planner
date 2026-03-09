@@ -64,14 +64,17 @@ export function Sidebar({ page, onNavigate }: Props) {
       </div>
 
       {/* Main nav */}
-      <nav className="flex-1 py-4 px-3 space-y-1">
+      <nav role="navigation" aria-label="Main navigation" className="flex-1 py-4 px-3 space-y-1">
         {mainItems.map(({ id, label, icon: Icon }) => {
           const active = page === id
           return (
             <button
               key={id}
               onClick={() => onNavigate(id)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
+              aria-current={active ? 'page' : undefined}
+              aria-label={label}
+              title={label}
+              className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
               style={active ? { background: '#1e2d40', color: '#d4af37' } : { color: '#94a3b8' }}
             >
               <Icon size={16} />
@@ -88,7 +91,10 @@ export function Sidebar({ page, onNavigate }: Props) {
           <button
             key={id}
             onClick={() => onNavigate(id)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
+            aria-current={page === id ? 'page' : undefined}
+            aria-label={label}
+            title={label}
+            className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
             style={page === id ? { background: '#1e2d40', color: '#d4af37' } : { color: '#94a3b8' }}
           >
             <Icon size={16} />

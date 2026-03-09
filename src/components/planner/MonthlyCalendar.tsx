@@ -56,6 +56,7 @@ function DraggableEventChip({ event, catStyle, dateStr, onEdit }: DraggableEvent
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      aria-label={event.title}
       className="text-left text-xs px-1 py-0.5 rounded truncate leading-tight w-full cursor-grab active:cursor-grabbing"
       style={{
         background: catStyle.bgColor,
@@ -107,6 +108,7 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
         </span>
         <button
           className="opacity-0 group-hover:opacity-60 hover:opacity-100!"
+          aria-label="Add event"
           onClick={(ev) => { ev.stopPropagation(); onAddEvent(dateStr) }}
         >
           <Plus size={11} style={{ color: '#d4af37' }} />
@@ -121,6 +123,7 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
             <button
               key={ev.id}
               className="text-left text-xs px-1 py-0.5 rounded truncate leading-tight w-full"
+              aria-label={ev.title}
               style={{ background: catStyle.bgColor, color: catStyle.color }}
               onClick={(e) => { e.stopPropagation(); onEditEvent(ev) }}
             >
@@ -254,7 +257,7 @@ export function MonthlyCalendar() {
         className="flex items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 no-print"
         style={{ borderBottom: '1px solid #1e2d40' }}
       >
-        <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+        <button onClick={() => navigate(-1)} aria-label="Previous month" title="Previous month" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
           <ChevronLeft size={16} className="text-slate-400" />
         </button>
 
@@ -269,7 +272,7 @@ export function MonthlyCalendar() {
           )}
         </div>
 
-        <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+        <button onClick={() => navigate(1)} aria-label="Next month" title="Next month" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
           <ChevronRight size={16} className="text-slate-400" />
         </button>
 

@@ -8,6 +8,8 @@ export function CategoryLegend() {
         <div key={cat.id} className="flex items-center gap-1.5">
           <span
             className="inline-block w-3 h-3 rounded-sm"
+            title={cat.label}
+            aria-label={cat.label}
             style={{ background: cat.bgColor, border: `1px solid ${cat.color}` }}
           />
           <span className="text-xs font-semibold tracking-wide" style={{ color: cat.color }}>

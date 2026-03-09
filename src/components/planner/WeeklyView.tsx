@@ -208,7 +208,7 @@ export function WeeklyView() {
         className="flex items-center gap-3 px-4 md:px-6 py-3 md:py-4 no-print flex-wrap"
         style={{ borderBottom: '1px solid #1e2d40' }}
       >
-        <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-white/10">
+        <button onClick={() => navigate(-1)} aria-label="Previous week" title="Previous week" className="p-1.5 rounded-lg hover:bg-white/10">
           <ChevronLeft size={16} className="text-slate-400" />
         </button>
 
@@ -218,7 +218,7 @@ export function WeeklyView() {
           </h2>
         </div>
 
-        <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-white/10">
+        <button onClick={() => navigate(1)} aria-label="Next week" title="Next week" className="p-1.5 rounded-lg hover:bg-white/10">
           <ChevronRight size={16} className="text-slate-400" />
         </button>
 
@@ -353,9 +353,13 @@ export function WeeklyView() {
                       // Mobile: compact chip style
                       <span
                         key={ev.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={ev.title}
                         className="inline-flex items-center gap-1 text-xs leading-tight cursor-pointer rounded px-1.5 py-0.5 mr-1"
                         style={{ color: catStyle.color, background: catStyle.bgColor }}
                         onClick={() => { setEditingEvent(ev); setModalDate(null) }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setEditingEvent(ev); setModalDate(null) } }}
                       >
                         {ev.title}
                       </span>
@@ -378,6 +382,7 @@ export function WeeklyView() {
                     >
                       <button
                         onClick={() => toggleTask(task.id)}
+                        aria-label={task.completed ? 'Mark task incomplete' : 'Mark task complete'}
                         className="shrink-0"
                       >
                         {task.completed
@@ -391,6 +396,7 @@ export function WeeklyView() {
                       </span>
                       <button
                         className="opacity-0 group-hover:opacity-60"
+                        aria-label={`Remove task: ${task.title}`}
                         onClick={() => removeTask(task.id)}
                       >
                         <Plus size={10} className="text-red-400 rotate-45" />

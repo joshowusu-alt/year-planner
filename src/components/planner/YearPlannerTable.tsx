@@ -35,9 +35,13 @@ function EventChip({
   const style = getCategoryStyle(event.category, categories)
   return (
     <span
+      role="button"
+      tabIndex={0}
       className="inline-flex items-center gap-1 text-xs leading-tight cursor-pointer group rounded px-1"
       style={{ color: style.color, background: style.bgColor }}
       onClick={(ev) => { ev.stopPropagation(); onEdit(event) }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onEdit(event) } }}
+      aria-label={event.title}
       title={event.notes || event.title}
     >
       <span>{event.title}</span>
@@ -159,6 +163,7 @@ function MonthColumn({
             <button
               className="compact-tap shrink-0 w-5 md:w-6 flex items-center justify-center opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity"
               onClick={() => onAddEvent(dateStr)}
+              aria-label="Add event"
               title="Add event"
             >
               <Plus size={11} style={{ color: '#d4af37' }} />

@@ -49,6 +49,7 @@ export function MobileHeader({ onMenuToggle, onAddEvent, onQuickAdd }: Props) {
         )}
         <button
           onClick={onAddEvent}
+          aria-label="Add event"
           className="h-11 flex items-center gap-1.5 px-3 rounded-xl text-xs font-bold active:scale-95 transition-transform"
           style={{ background: '#d4af37', color: '#111827' }}
         >

@@ -79,6 +79,12 @@ html {
   color: #ef4444 !important;
 }
 
+/* Gold focus ring for keyboard navigation */
+.focus-ring:focus-visible {
+  outline: 2px solid #d4af37;
+  outline-offset: 2px;
+}
+
 /* Print / PDF styles */
 @media print {
   .no-print { display: none !important; }

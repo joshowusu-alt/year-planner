@@ -64,6 +64,15 @@ export function ShareModal({ onClose }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadData() }, [user?.id])
 
+  // Close on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   function buildShareUrl(token: string) {
     return `${window.location.origin}/?share=${token}`
   }
@@ -158,6 +167,9 @@ export function ShareModal({ onClose }: Props) {
       >
         <div
           className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="share-modal-title"
           style={{
             background: '#0d1224',
             border: '1px solid #1e2d40',
@@ -171,6 +183,7 @@ export function ShareModal({ onClose }: Props) {
           >
             <div>
               <h2
+                id="share-modal-title"
                 className="text-lg font-black tracking-wider uppercase"
                 style={{ color: '#d4af37' }}
               >
@@ -182,7 +195,8 @@ export function ShareModal({ onClose }: Props) {
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-white/5 transition-colors shrink-0"
+              aria-label="Close"
+              className="focus-ring p-1.5 rounded-lg hover:bg-white/5 transition-colors shrink-0"
               style={{ color: '#94a3b8' }}
             >
               <X size={18} />

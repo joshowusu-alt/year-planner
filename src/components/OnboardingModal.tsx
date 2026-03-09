@@ -91,6 +91,9 @@ export function OnboardingModal({ onComplete }: Props) {
     >
       <div
         className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Onboarding wizard"
         style={{ background: '#0d1224', border: '1px solid #1e2d40', maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)' }}
       >
         {/* Progress bar */}
