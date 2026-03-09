@@ -10,6 +10,8 @@ import {
   AlertCircle,
   XCircle,
   Edit3,
+  AlertTriangle,
+  Info,
 } from 'lucide-react'
 import { addDays, addWeeks, format, setDay, getDay } from 'date-fns'
 import type { RecurrenceRule, RecurrenceType, EventCategoryDef } from '../types'
@@ -29,6 +31,7 @@ export interface ParsedEvent {
   category: string
   confidence: 'high' | 'medium' | 'low'
   _dateFound: boolean
+  _dateAmbiguous?: boolean
   _titleFound: boolean
 }
 
@@ -110,6 +113,7 @@ export function parseNaturalLanguage(
   // ── Step 1: Date ────────────────────────────────────────────────────────────
   let parsedDate = today
   let dateFound = false
+  let dateAmbiguous = false
 
   const markRemove = (match: RegExpMatchArray) => {
     const start = match.index ?? 0
@@ -138,9 +142,22 @@ export function parseNaturalLanguage(
     const m = text.match(/\bin\s+(\d+)\s+(days?|weeks?)\b/)
     if (m) {
       const n = parseInt(m[1])
-      parsedDate = m[2].startsWith('week') ? addWeeks(today, n) : addDays(today, n)
+      const baseDate = m[2].startsWith('week') ? addWeeks(today, n) : addDays(today, n)
+      parsedDate = baseDate
       dateFound = true
       markRemove(m)
+      // Compound: "in N weeks on <weekday>" / "meeting Tuesday in 2 weeks"
+      if (m[2].startsWith('week')) {
+        const days = Object.keys(WEEKDAY_MAP).join('|')
+        const wdM = text.match(new RegExp(`\\b(${days})\\b`))
+        if (wdM) {
+          const dayIdx = WEEKDAY_MAP[wdM[1]]
+          const baseDayIdx = getDay(baseDate)
+          const diff = (dayIdx - baseDayIdx + 7) % 7
+          parsedDate = addDays(baseDate, diff)
+          markRemove(wdM)
+        }
+      }
     }
   }
 
@@ -226,6 +243,7 @@ export function parseNaturalLanguage(
         // Pick closest upcoming
         const daysUntilMmdd = (mmdd.getTime() - today.getTime()) / 86400000
         const daysUntilDdmm = (ddmm.getTime() - today.getTime()) / 86400000
+        dateAmbiguous = true
         candidate =
           daysUntilMmdd >= 0 && (daysUntilDdmm < 0 || daysUntilMmdd <= daysUntilDdmm)
             ? mmdd
@@ -418,6 +436,7 @@ export function parseNaturalLanguage(
     category: categoryId,
     confidence,
     _dateFound: dateFound,
+    _dateAmbiguous: dateAmbiguous,
     _titleFound: titleFound,
   }
 }
@@ -441,11 +460,11 @@ function ConfidenceIcon({ c }: { c: 'high' | 'medium' | 'low' }) {
 function PreviewCard({
   parsed,
   categories,
-  dateFound,
+  inputLen,
 }: {
   parsed: ParsedEvent
   categories: EventCategoryDef[]
-  dateFound: boolean
+  inputLen: number
 }) {
   const cat = categories.find((c) => c.id === parsed.category)
   const border = confidenceBorder(parsed.confidence)
@@ -470,6 +489,13 @@ function PreviewCard({
         </span>
       </div>
 
+      {/* Low-confidence hint */}
+      {parsed.confidence === 'low' && inputLen > 3 && (
+        <span style={{ fontSize: 12, color: '#64748b', fontStyle: 'italic' }}>
+          Could not parse a clear date or title. Try: &quot;Team meeting tomorrow at 3pm&quot;
+        </span>
+      )}
+
       {/* Title */}
       <Row icon={<Tag size={13} color="#94a3b8" />} label="Title">
         <span style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600 }}>{parsed.title}</span>
@@ -480,10 +506,21 @@ function PreviewCard({
         <span style={{ color: '#e2e8f0', fontSize: 14 }}>
           {format(new Date(parsed.date + 'T00:00:00'), 'EEE, MMM d yyyy')}
         </span>
-        {!dateFound && (
-          <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 6 }}>— defaulting to today</span>
-        )}
       </Row>
+      {!parsed._dateFound && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 22 }}>
+          <AlertTriangle size={10} color="#f59e0b" />
+          <span style={{ fontSize: 11, color: '#f59e0b' }}>No date detected — defaulting to today</span>
+        </div>
+      )}
+      {parsed._dateAmbiguous && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 22 }}>
+          <Info size={10} color="#94a3b8" />
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>
+            Ambiguous date — interpreted as {format(new Date(parsed.date + 'T00:00:00'), 'EEE, MMM d yyyy')}
+          </span>
+        </div>
+      )}
 
       {/* Time */}
       {parsed.startTime && (
@@ -596,6 +633,7 @@ export function NaturalLanguageInput({ onClose }: Props) {
       parsed.recurrence?.type !== 'none' ? parsed.recurrence : undefined,
       parsed.startTime,
       parsed.endTime,
+      parsed.startTime ? undefined : null,
     )
     handleClose()
   }, [parsed, addEvent, handleClose])
@@ -812,7 +850,7 @@ export function NaturalLanguageInput({ onClose }: Props) {
             <PreviewCard
               parsed={parsed}
               categories={categories}
-              dateFound={parsed._dateFound}
+              inputLen={input.trim().length}
             />
           </div>
         )}

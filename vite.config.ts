@@ -5,6 +5,18 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-datefns': ['date-fns'],
+          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/utilities'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-lucide': ['lucide-react'],
+        },
+      },
+    },
+  },
   plugins: [
     tailwindcss(),
     react(),
