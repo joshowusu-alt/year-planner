@@ -54,10 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Get all planner data rows
   const { data: plannerRows, error: plannerErr } = await supabase
     .from('planner_data')
-    .select('user_id, data')
-
-  if (plannerErr) return res.status(500).json({ error: plannerErr.message })
-
+      .select('user_id, store')
   // Get all push subscriptions
   const { data: subscriptions, error: subErr } = await supabase
     .from('push_subscriptions')
@@ -69,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let errors = 0
 
   for (const row of (plannerRows ?? [])) {
-    const events: PlannerEvent[] = row.data?.events ?? []
+    const events: PlannerEvent[] = row.store?.events ?? []
     const userId: string = row.user_id
 
     // Find subscriptions for this user (or all if userId is not stored per subscription)
