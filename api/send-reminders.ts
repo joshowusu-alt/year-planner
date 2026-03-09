@@ -3,12 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 import { parseISO, format, getDay, getDate, getMonth } from 'date-fns'
 
-webpush.setVapidDetails(
-  'mailto:admin@stratum.app',
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
-
 interface PlannerEvent {
   id: string
   title: string
@@ -34,11 +28,20 @@ function isEventActiveToday(ev: PlannerEvent, todayStr: string): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    // Validate env vars first — gives a useful 500 message instead of silent crash
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const vapidPublic = process.env.VAPID_PUBLIC_KEY
+    const vapidPrivate = process.env.VAPID_PRIVATE_KEY
+    if (!supabaseUrl || !supabaseKey || !vapidPublic || !vapidPrivate) {
+      return res.status(500).json({ error: 'Missing env vars', supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey, vapidPublic: !!vapidPublic, vapidPrivate: !!vapidPrivate })
+    }
+
+    webpush.setVapidDetails('mailto:admin@stratum.app', vapidPublic, vapidPrivate)
+
   // Allow GET (for cron) and POST (for manual trigger)
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
   const now = Date.now()
   const todayStr = format(new Date(), 'yyyy-MM-dd')
@@ -112,4 +115,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   return res.status(200).json({ sent, errors, checked: plannerRows?.length ?? 0 })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('send-reminders crash:', msg)
+    return res.status(500).json({ error: msg })
+  }
 }
