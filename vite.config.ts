@@ -21,7 +21,13 @@ export default defineConfig({
     tailwindcss(),
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
+      injectManifest: {
+        injectionPoint: 'self.__WB_MANIFEST',
+      },
       includeAssets: ['icon.svg', 'apple-touch-icon.png', 'og-image.png', 'icon-512.png'],
       manifest: {
         name: 'STRATUM — Executive Planning System',

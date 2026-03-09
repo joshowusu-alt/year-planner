@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react'
 import { Save, Upload, Plus, Trash2, Pencil, X, RotateCcw, Share2, Bell, BellOff, BellRing } from 'lucide-react'
 import { requestNotificationPermission } from '../lib/notifications'
+import { subscribeToPush, unsubscribeFromPush, getPushStatus, type PushStatus } from '../lib/pushSub'
 import { usePlanner } from '../context/PlannerContext'
 import type { EventCategoryDef } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
@@ -27,10 +28,33 @@ export function SettingsPage() {
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   )
   const [testSent, setTestSent] = useState(false)
+  const [pushStatus, setPushStatus] = useState<PushStatus>('loading')
 
   useEffect(() => {
     if (typeof Notification !== 'undefined') setNotifPerm(Notification.permission)
   }, [])
+
+  useEffect(() => {
+    getPushStatus().then(setPushStatus)
+  }, [])
+
+  async function handleEnablePush() {
+    // First ensure notification permission
+    if (Notification.permission !== 'granted') {
+      const perm = await requestNotificationPermission()
+      setNotifPerm(perm)
+      if (perm !== 'granted') return
+    }
+    setPushStatus('loading')
+    const ok = await subscribeToPush(user?.id)
+    setPushStatus(ok ? 'subscribed' : 'unsubscribed')
+  }
+
+  async function handleDisablePush() {
+    setPushStatus('loading')
+    await unsubscribeFromPush()
+    setPushStatus('unsubscribed')
+  }
 
   async function handleEnableNotifications() {
     const result = await requestNotificationPermission()
@@ -363,6 +387,45 @@ export function SettingsPage() {
             <p className="text-xs text-slate-600">
               Reminders fire while STRATUM is open in your browser. Set a start time on an event, then choose a reminder — the notification fires that many minutes before.
             </p>
+
+            {/* Background push */}
+            <div className="pt-3 mt-3" style={{ borderTop: '1px solid #1e2d40' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>
+                Background Push (when app is closed)
+              </p>
+              {pushStatus === 'unsupported' ? (
+                <p className="text-xs" style={{ color: '#64748b' }}>Not supported in this browser</p>
+              ) : pushStatus === 'denied' ? (
+                <p className="text-xs" style={{ color: '#f87171' }}>Blocked — enable notifications in browser settings first</p>
+              ) : pushStatus === 'subscribed' ? (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#34d399' }}>
+                    <Bell size={13} /> Push enabled ✓
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleDisablePush}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-80 transition-opacity"
+                    style={{ background: '#1e2d40', color: '#f87171', border: '1px solid #3b1e1e' }}
+                  >
+                    Disable
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleEnablePush}
+                  disabled={pushStatus === 'loading'}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90 disabled:opacity-50"
+                  style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
+                >
+                  <BellRing size={14} /> {pushStatus === 'loading' ? 'Checking…' : 'Enable Background Push'}
+                </button>
+              )}
+              <p className="text-xs mt-2" style={{ color: '#475569' }}>
+                Requires Supabase + cron job (/api/send-reminders every minute via cron-job.org).
+              </p>
+            </div>
           </div>
         </section>
 
