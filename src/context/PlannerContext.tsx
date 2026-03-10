@@ -228,8 +228,9 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
 
   // ── Goals ──
   const addGoal = useCallback((goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt' | 'milestones'>) => {
-    setStore((s) => createGoal(s, goal))
-  }, [])
+    const goalWithOwner = user?.id ? { ...goal, userId: user.id } : goal
+    setStore((s) => createGoal(s, goalWithOwner))
+  }, [user])
 
   const editGoal = useCallback((id: string, patch: Partial<Goal>) => {
     setStore((s) => updateGoal(s, id, patch))
@@ -253,8 +254,9 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
 
   // ── Tasks ──
   const addTask = useCallback((task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
-    setStore((s) => createTask(s, task))
-  }, [])
+    const taskWithOwner = user?.id ? { ...task, userId: user.id } : task
+    setStore((s) => createTask(s, taskWithOwner))
+  }, [user])
 
   const editTask = useCallback((id: string, patch: Partial<Task>) => {
     setStore((s) => updateTask(s, id, patch))

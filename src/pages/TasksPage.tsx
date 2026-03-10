@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Plus, CheckSquare, Square, Trash2, Flag, Calendar, Clock, X } from 'lucide-react'
+import { Plus, CheckSquare, Square, Trash2, Flag, Calendar, Clock, X, Pencil, Lock } from 'lucide-react'
 import { format } from 'date-fns'
 import { usePlanner } from '../context/PlannerContext'
+import { useAuth } from '../context/AuthContext'
 import type { Task, PriorityLevel, TaskPeriod } from '../types'
 import { PRIORITY_COLORS, PRIORITY_LABELS } from '../types'
 
@@ -162,7 +163,11 @@ function TaskModal({
 
 function TaskItem({ task }: { task: Task }) {
   const { toggleTask, removeTask, editTask, store } = usePlanner()
+  const { user } = useAuth()
   const [editing, setEditing] = useState(false)
+
+  // A task is editable by the current user if it has no owner (legacy) or they own it
+  const canEdit = !task.userId || task.userId === user?.id
 
   return (
     <>
@@ -215,18 +220,28 @@ function TaskItem({ task }: { task: Task }) {
         </div>
 
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          <button
-            className="p-1.5 rounded hover:bg-white/10"
-            onClick={() => setEditing(true)}
-          >
-            <Flag size={12} className="text-slate-400" />
-          </button>
-          <button
-            className="p-1.5 rounded hover:bg-red-900/30"
-            onClick={() => { if (confirm('Delete task?')) removeTask(task.id) }}
-          >
-            <Trash2 size={12} className="text-red-400" />
-          </button>
+          {canEdit ? (
+            <>
+              <button
+                title="Edit task"
+                className="p-1.5 rounded hover:bg-white/10"
+                onClick={() => setEditing(true)}
+              >
+                <Pencil size={12} className="text-slate-400" />
+              </button>
+              <button
+                title="Delete task"
+                className="p-1.5 rounded hover:bg-red-900/30"
+                onClick={() => { if (confirm('Delete task?')) removeTask(task.id) }}
+              >
+                <Trash2 size={12} className="text-red-400" />
+              </button>
+            </>
+          ) : (
+            <span title="You cannot edit another user's task" className="p-1.5">
+              <Lock size={12} className="text-slate-600" />
+            </span>
+          )}
         </div>
       </div>
 

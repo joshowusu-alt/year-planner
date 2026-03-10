@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, CheckSquare, Square, Flag, X } from 'lucide-react'
+import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, CheckSquare, Square, Flag, X, Lock } from 'lucide-react'
 import { usePlanner } from '../context/PlannerContext'
+import { useAuth } from '../context/AuthContext'
 import type { Goal, Milestone, PriorityLevel, GoalStatus } from '../types'
 import { PRIORITY_COLORS, PRIORITY_LABELS, GOAL_STATUS_LABELS } from '../types'
 
@@ -235,6 +236,8 @@ function MilestoneRow({
 
 function GoalCard({ goal }: { goal: Goal }) {
   const { editGoal, removeGoal, addMilestoneToGoal, editMilestone, removeMilestone, store, toggleTask } = usePlanner()
+  const { user } = useAuth()
+  const canEdit = !goal.userId || goal.userId === user?.id
   const linkedTasks = store.tasks.filter((t) => t.goalId === goal.id)
   const completedLinkedTasks = linkedTasks.filter((t) => t.completed).length
   const [expanded, setExpanded] = useState(false)
@@ -278,12 +281,20 @@ function GoalCard({ goal }: { goal: Goal }) {
 
             {/* Actions */}
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={() => setEditing(true)} className="p-1.5 rounded hover:bg-white/10 transition-colors">
-                <Pencil size={12} className="text-slate-400" />
-              </button>
-              <button onClick={() => { if(confirm('Delete this goal?')) removeGoal(goal.id) }} className="p-1.5 rounded hover:bg-red-900/30 transition-colors">
-                <Trash2 size={12} className="text-red-400" />
-              </button>
+              {canEdit ? (
+                <>
+                  <button title="Edit goal" onClick={() => setEditing(true)} className="p-1.5 rounded hover:bg-white/10 transition-colors">
+                    <Pencil size={12} className="text-slate-400" />
+                  </button>
+                  <button title="Delete goal" onClick={() => { if(confirm('Delete this goal?')) removeGoal(goal.id) }} className="p-1.5 rounded hover:bg-red-900/30 transition-colors">
+                    <Trash2 size={12} className="text-red-400" />
+                  </button>
+                </>
+              ) : (
+                <span title="You cannot edit another user's goal" className="p-1.5">
+                  <Lock size={12} className="text-slate-600" />
+                </span>
+              )}
               <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded hover:bg-white/10 transition-colors">
                 {expanded ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
               </button>
