@@ -277,7 +277,7 @@ export function WeeklyView() {
         <div className="flex-1 overflow-auto">
           <div
             className={isMobile
-              ? 'flex flex-col gap-2 p-3'
+              ? 'flex flex-col gap-1.5 px-2 py-2'
               : 'grid grid-cols-7 h-full'
             }
             style={isMobile ? {} : { minWidth: '700px' }}
@@ -295,12 +295,12 @@ export function WeeklyView() {
                 dateStr={dateStr}
                 today={today}
                 isMobile={isMobile}
-                className={isMobile ? 'rounded-xl p-2' : 'flex flex-col border-r'}
+                className={isMobile ? 'rounded-xl px-2 pt-1.5 pb-1' : 'flex flex-col border-r'}
               >
                 {/* Day header */}
                 <div
                   className={isMobile
-                    ? 'flex items-center gap-2 pb-1.5 mb-1.5 border-b'
+                    ? 'flex items-center gap-1.5 pb-1 mb-1 border-b'
                     : 'flex flex-col items-center py-3 border-b sticky top-0'
                   }
                   style={{ borderColor: '#1e2d40', background: isMobile ? 'transparent' : (today ? '#0d1a2e' : '#0a0e1a') }}
@@ -329,7 +329,15 @@ export function WeeklyView() {
                       {format(date, 'd')}
                     </span>
                   )}
-                  {today && (
+                  {today && isMobile && (
+                    <span
+                      className="text-xs font-bold uppercase tracking-wide"
+                      style={{ color: '#d4af37', fontSize: '0.65rem', letterSpacing: '0.06em' }}
+                    >
+                      Today
+                    </span>
+                  )}
+                  {today && !isMobile && (
                     <span
                       className="text-xs font-black uppercase tracking-wider"
                       style={{ color: '#d4af37' }}
@@ -337,9 +345,12 @@ export function WeeklyView() {
                       Today
                     </span>
                   )}
-                  {isMobile && !today && (
-                    <span className="flex-1 text-xs text-slate-600">
-                      {events.length > 0 && `${events.length}e`}{tasks.length > 0 && ` ${tasks.length}t`}
+                  {isMobile && (
+                    <span className="flex-1" />
+                  )}
+                  {isMobile && (events.length + tasks.length > 0) && (
+                    <span className="text-xs font-medium" style={{ color: today ? '#d4af37' : '#475569' }}>
+                      {events.length + tasks.length}
                     </span>
                   )}
                 </div>
@@ -435,7 +446,7 @@ export function WeeklyView() {
                 {/* Add event button */}
                 <button
                   className={isMobile
-                    ? 'flex items-center justify-center gap-1 py-2 mt-2 text-xs text-slate-600 active:text-yellow-400 active:bg-white/5 transition-colors border-t rounded-lg'
+                    ? 'flex items-center justify-center gap-0.5 py-1 mt-0.5 text-xs text-slate-700 active:text-yellow-400 active:bg-white/5 transition-colors border-t'
                     : 'flex items-center justify-center gap-1 py-2 text-xs text-slate-600 hover:text-yellow-400 hover:bg-white/5 transition-colors border-t'
                   }
                   style={{ borderColor: '#1e2d40' }}
@@ -447,7 +458,7 @@ export function WeeklyView() {
                     }
                   }}
                 >
-                  <Plus size={11} /> event
+                  <Plus size={10} />
                 </button>
               </DroppableDayColumn>
             )

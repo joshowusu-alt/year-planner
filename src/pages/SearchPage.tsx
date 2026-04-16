@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Search, CalendarDays, Target, CheckSquare, FileText, X } from 'lucide-react'
+import { Search, CalendarDays, Target, CheckSquare, FileText, X, SlidersHorizontal } from 'lucide-react'
 import { format, parseISO, isAfter, isBefore, isEqual } from 'date-fns'
 import { usePlanner } from '../context/PlannerContext'
 import { getCategoryStyle, GOAL_STATUS_LABELS } from '../types'
 import type { GoalStatus } from '../types'
 import type { Page } from '../components/layout/Sidebar'
-import { useBreakpoint } from '../hooks/useMediaQuery'
 
 interface Props {
   onNavigate: (p: Page) => void
@@ -44,12 +43,13 @@ const PILL_ACTIVE: React.CSSProperties = {
   color: '#0a0e1a',
   fontWeight: 600,
   borderRadius: '9999px',
-  padding: '6px 16px',
-  fontSize: '0.8rem',
+  padding: '3px 12px',
+  fontSize: '0.75rem',
   border: '1px solid #d4af37',
   cursor: 'pointer',
-  minHeight: '36px',
+  minHeight: '28px',
   whiteSpace: 'nowrap',
+  lineHeight: '1',
 }
 
 const PILL_INACTIVE: React.CSSProperties = {
@@ -57,20 +57,21 @@ const PILL_INACTIVE: React.CSSProperties = {
   color: '#94a3b8',
   fontWeight: 400,
   borderRadius: '9999px',
-  padding: '6px 16px',
-  fontSize: '0.8rem',
+  padding: '3px 12px',
+  fontSize: '0.75rem',
   border: '1px solid #1e2d40',
   cursor: 'pointer',
-  minHeight: '36px',
+  minHeight: '28px',
   whiteSpace: 'nowrap',
+  lineHeight: '1',
 }
 
 const SCROLL_ROW: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'row',
-  gap: '8px',
+  gap: '6px',
   overflowX: 'auto',
-  paddingBottom: '4px',
+  paddingBottom: '2px',
   scrollbarWidth: 'none',
   msOverflowStyle: 'none',
   flexWrap: 'nowrap',
@@ -81,10 +82,10 @@ const DATE_INPUT_STYLE: React.CSSProperties = {
   background: '#0d1224',
   border: '1px solid #1e2d40',
   color: '#e2e8f0',
-  borderRadius: '8px',
-  padding: '6px 10px',
-  minHeight: '40px',
-  fontSize: '0.875rem',
+  borderRadius: '6px',
+  padding: '4px 8px',
+  minHeight: '30px',
+  fontSize: '0.75rem',
   colorScheme: 'dark',
 }
 
@@ -101,7 +102,6 @@ const GOAL_STATUS_TAB_LABELS: Record<GoalStatus | 'all', string> = {
 
 export function SearchPage({ onNavigate }: Props) {
   const { store } = usePlanner()
-  const { isMobile } = useBreakpoint()
 
   const [query, setQuery] = useState('')
   const [activeTab, setActiveTab] = useState<ResultTab>('all')
@@ -109,6 +109,7 @@ export function SearchPage({ onNavigate }: Props) {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [goalStatus, setGoalStatus] = useState<GoalStatus | 'all'>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const q = query.trim().toLowerCase()
 
@@ -143,8 +144,8 @@ export function SearchPage({ onNavigate }: Props) {
   const filtered = useMemo(() => {
     let events = baseResults.events
     let goals  = baseResults.goals
-    let tasks  = baseResults.tasks
-    let notes  = baseResults.notes
+    const tasks = baseResults.tasks
+    const notes = baseResults.notes
 
     // category filter (events only)
     if (categoryFilter) {
@@ -192,6 +193,12 @@ export function SearchPage({ onNavigate }: Props) {
   const hasActiveFilter =
     categoryFilter !== null || dateFrom !== '' || dateTo !== '' || goalStatus !== 'all'
 
+  const activeFilterCount =
+    (categoryFilter !== null ? 1 : 0) +
+    (dateFrom !== '' ? 1 : 0) +
+    (dateTo !== '' ? 1 : 0) +
+    (goalStatus !== 'all' ? 1 : 0)
+
   function clearAllFilters() {
     setCategoryFilter(null)
     setDateFrom('')
@@ -209,19 +216,19 @@ export function SearchPage({ onNavigate }: Props) {
 
   return (
     <div className="flex flex-col h-full" style={{ background: '#0a0e1a', minHeight: '100%' }}>
-      {/* ── Sticky header: search + filters ─────────────────────────────── */}
+      {/* ── Sticky header: search + tabs + collapsible filters ───────────── */}
       <div
-        className="shrink-0 px-4 pt-4 pb-2"
+        className="shrink-0 px-4 pt-3 pb-2"
         style={{ borderBottom: '1px solid #1e2d40', position: 'sticky', top: 0, zIndex: 10, background: '#0a0e1a' }}
       >
-        <h1 className="text-lg font-black tracking-widest uppercase mb-3" style={{ color: '#d4af37' }}>
+        <h1 className="text-base font-black tracking-widest uppercase mb-2" style={{ color: '#d4af37' }}>
           Search
         </h1>
 
         {/* Search input */}
-        <div className="relative mb-3">
+        <div className="relative mb-2">
           <Search
-            size={16}
+            size={15}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
           />
           <input
@@ -229,8 +236,8 @@ export function SearchPage({ onNavigate }: Props) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search events, goals, tasks, notes…"
-            className="w-full pl-9 pr-9 py-2.5 rounded-xl focus:outline-none focus:ring-2"
+            placeholder="Events, goals, tasks, notes…"
+            className="w-full pl-9 pr-9 py-2 rounded-xl focus:outline-none focus:ring-2"
             style={{
               background: '#1e2d40',
               border: '1px solid #243447',
@@ -248,147 +255,160 @@ export function SearchPage({ onNavigate }: Props) {
           )}
         </div>
 
-        {/* ── Type tabs ───────────────────────────────────────────────── */}
-        <div style={SCROLL_ROW} className="mb-2">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              aria-pressed={activeTab === tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={activeTab === tab.id ? PILL_ACTIVE : PILL_INACTIVE}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Event filters: categories + date range ───────────────────── */}
-        {showEventFilters && (
-          <>
-            {/* Category pills */}
-            <div style={{ ...SCROLL_ROW, marginBottom: '8px' }}>
+        {/* ── Type tabs + filter toggle on one row ────────────────────── */}
+        <div className="flex items-center gap-2">
+          <div style={{ ...SCROLL_ROW, flex: 1 }}>
+            {TABS.map((tab) => (
               <button
-                aria-pressed={categoryFilter === null}
-                onClick={() => setCategoryFilter(null)}
-                style={categoryFilter === null ? PILL_ACTIVE : PILL_INACTIVE}
+                key={tab.id}
+                aria-pressed={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={activeTab === tab.id ? PILL_ACTIVE : PILL_INACTIVE}
               >
-                All categories
-              </button>
-              {store.categories.map((cat) => {
-                const catStyle = getCategoryStyle(cat.id, store.categories)
-                const isActive = categoryFilter === cat.id
-                return (
-                  <button
-                    key={cat.id}
-                    aria-pressed={isActive}
-                    onClick={() => setCategoryFilter(isActive ? null : cat.id)}
-                    style={isActive ? PILL_ACTIVE : { ...PILL_INACTIVE, paddingLeft: '10px' }}
-                  >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                      <span
-                        aria-label={cat.label}
-                        title={cat.label}
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          background: isActive ? '#0a0e1a' : catStyle.color,
-                          display: 'inline-block',
-                          flexShrink: 0,
-                        }}
-                      />
-                      {cat.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Date range */}
-            <div
-              className="mb-2"
-              style={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: '8px',
-                alignItems: isMobile ? 'stretch' : 'center',
-              }}
-            >
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                <span style={{ color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>From:</span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  style={{ ...DATE_INPUT_STYLE, flex: 1, width: '100%' }}
-                />
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                <span style={{ color: '#94a3b8', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>To:</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  style={{ ...DATE_INPUT_STYLE, flex: 1, width: '100%' }}
-                />
-              </label>
-              {(dateFrom || dateTo) && (
-                <button
-                  onClick={() => { setDateFrom(''); setDateTo('') }}
-                  style={{
-                    color: '#94a3b8',
-                    fontSize: '0.8rem',
-                    background: 'transparent',
-                    border: '1px solid #1e2d40',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    minHeight: '40px',
-                  }}
-                >
-                  Clear dates
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* ── Goal status filter ───────────────────────────────────────── */}
-        {showGoalFilter && (
-          <div style={{ ...SCROLL_ROW, marginBottom: '8px' }}>
-            {GOAL_STATUS_OPTIONS.map((s) => (
-              <button
-                key={s}
-                aria-pressed={goalStatus === s}
-                onClick={() => setGoalStatus(s)}
-                style={goalStatus === s ? PILL_ACTIVE : PILL_INACTIVE}
-              >
-                {GOAL_STATUS_TAB_LABELS[s]}
+                {tab.label}
               </button>
             ))}
           </div>
-        )}
 
-        {/* ── Clear all filters ────────────────────────────────────────── */}
-        {hasActiveFilter && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
-            <button
-              onClick={clearAllFilters}
-              style={{
-                color: '#94a3b8',
-                fontSize: '0.8rem',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <X size={12} />
-              Clear all filters
-            </button>
+          {/* Filter toggle */}
+          <button
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-pressed={filtersOpen}
+            className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors relative"
+            style={{
+              background: filtersOpen ? '#1e2d40' : 'transparent',
+              border: '1px solid',
+              borderColor: hasActiveFilter ? '#d4af37' : '#1e2d40',
+              color: hasActiveFilter ? '#d4af37' : '#94a3b8',
+              minHeight: '28px',
+            }}
+          >
+            <SlidersHorizontal size={12} />
+            {activeFilterCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 text-xs font-black w-4 h-4 flex items-center justify-center rounded-full"
+                style={{ background: '#d4af37', color: '#0a0e1a', fontSize: '0.625rem' }}
+              >
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* ── Collapsible filter tray ──────────────────────────────────── */}
+        {filtersOpen && (
+          <div className="mt-2 space-y-2">
+            {/* Category filter */}
+            {showEventFilters && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#475569' }}>Category</p>
+                <div style={SCROLL_ROW}>
+                  <button
+                    aria-pressed={categoryFilter === null}
+                    onClick={() => setCategoryFilter(null)}
+                    style={categoryFilter === null ? PILL_ACTIVE : PILL_INACTIVE}
+                  >
+                    All
+                  </button>
+                  {store.categories.map((cat) => {
+                    const catStyle = getCategoryStyle(cat.id, store.categories)
+                    const isActive = categoryFilter === cat.id
+                    return (
+                      <button
+                        key={cat.id}
+                        aria-pressed={isActive}
+                        onClick={() => setCategoryFilter(isActive ? null : cat.id)}
+                        style={isActive ? PILL_ACTIVE : PILL_INACTIVE}
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <span
+                            style={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: '50%',
+                              background: isActive ? '#0a0e1a' : catStyle.color,
+                              display: 'inline-block',
+                              flexShrink: 0,
+                            }}
+                          />
+                          {cat.label}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Date range */}
+            {showEventFilters && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#475569' }}>Date range</p>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 flex-1">
+                    <span style={{ color: '#94a3b8', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>From</span>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      style={{ ...DATE_INPUT_STYLE, flex: 1, width: '100%' }}
+                    />
+                  </label>
+                  <label className="flex items-center gap-1.5 flex-1">
+                    <span style={{ color: '#94a3b8', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>To</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      style={{ ...DATE_INPUT_STYLE, flex: 1, width: '100%' }}
+                    />
+                  </label>
+                  {(dateFrom || dateTo) && (
+                    <button
+                      onClick={() => { setDateFrom(''); setDateTo('') }}
+                      className="p-1 rounded"
+                      style={{ color: '#94a3b8' }}
+                      aria-label="Clear dates"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Goal status */}
+            {showGoalFilter && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#475569' }}>Status</p>
+                <div style={SCROLL_ROW}>
+                  {GOAL_STATUS_OPTIONS.map((s) => (
+                    <button
+                      key={s}
+                      aria-pressed={goalStatus === s}
+                      onClick={() => setGoalStatus(s)}
+                      style={goalStatus === s ? PILL_ACTIVE : PILL_INACTIVE}
+                    >
+                      {GOAL_STATUS_TAB_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Clear all */}
+            {hasActiveFilter && (
+              <div className="flex justify-end pt-0.5">
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-1 text-xs"
+                  style={{ color: '#d4af37', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                >
+                  <X size={10} />
+                  Clear all filters
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -460,8 +480,8 @@ export function SearchPage({ onNavigate }: Props) {
                     style={{
                       background: '#0d1224',
                       border: '1px solid #1e2d40',
-                      padding: '12px 16px',
-                      minHeight: '56px',
+                      padding: '10px 12px',
+                      minHeight: '44px',
                     }}
                   >
                     <p className="text-sm font-semibold text-white">
@@ -515,8 +535,8 @@ export function SearchPage({ onNavigate }: Props) {
                     style={{
                       background: '#0d1224',
                       border: '1px solid #1e2d40',
-                      padding: '12px 16px',
-                      minHeight: '56px',
+                      padding: '10px 12px',
+                      minHeight: '44px',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
@@ -571,8 +591,8 @@ export function SearchPage({ onNavigate }: Props) {
                   style={{
                     background: '#0d1224',
                     border: '1px solid #1e2d40',
-                    padding: '12px 16px',
-                    minHeight: '56px',
+                    padding: '10px 12px',
+                    minHeight: '44px',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -636,8 +656,8 @@ export function SearchPage({ onNavigate }: Props) {
                     style={{
                       background: '#0d1224',
                       border: '1px solid #1e2d40',
-                      padding: '12px 16px',
-                      minHeight: '56px',
+                      padding: '10px 12px',
+                      minHeight: '44px',
                     }}
                   >
                     <p className="text-sm font-semibold text-white">

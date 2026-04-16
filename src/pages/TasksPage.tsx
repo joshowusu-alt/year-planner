@@ -35,11 +35,11 @@ function TaskModal({
     >
       <div
         className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
-        style={{ background: '#111827', border: '1px solid #1e2d40', maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)' }}
+        style={{ background: '#111827', border: '1px solid #1e2d40', maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 16px)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid #1e2d40' }}>
-          <h2 className="font-bold text-lg" style={{ color: '#d4af37' }}>
+        <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid #1e2d40' }}>
+          <h2 className="font-bold text-base" style={{ color: '#d4af37' }}>
             {initial?.id ? 'Edit Task' : 'New Task'}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
@@ -47,7 +47,7 @@ function TaskModal({
           </button>
         </div>
         {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 p-6 space-y-4">
+        <div className="overflow-y-auto flex-1 px-4 py-3 space-y-3">
         <input
           autoFocus
           value={title}
@@ -128,8 +128,8 @@ function TaskModal({
         </div>
         {/* Sticky footer */}
         <div
-          className="shrink-0 flex gap-2 justify-end px-6 py-4"
-          style={{ borderTop: '1px solid #1e2d40', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          className="shrink-0 flex gap-2 justify-end px-4 py-3"
+          style={{ borderTop: '1px solid #1e2d40', paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
         >
           <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:bg-white/5 rounded-lg">Cancel</button>
           <button
@@ -172,46 +172,44 @@ function TaskItem({ task }: { task: Task }) {
   return (
     <>
       <div
-        className={`flex items-start gap-3 p-3 rounded-xl group transition-all ${
+        className={`flex items-start gap-2.5 px-2.5 py-2 rounded-xl group transition-all ${
           task.completed ? 'opacity-50' : ''
         }`}
         style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
       >
-        <button onClick={() => toggleTask(task.id)} className="mt-0.5 shrink-0">
+        <button onClick={() => toggleTask(task.id)} className="mt-0.5 shrink-0 p-0.5" style={{ minWidth: 20, minHeight: 20 }}>
           {task.completed
-            ? <CheckSquare size={16} className="text-green-400" />
-            : <Square size={16} style={{ color: PRIORITY_COLORS[task.priority] }} />}
+            ? <CheckSquare size={15} className="text-green-400" />
+            : <Square size={15} style={{ color: PRIORITY_COLORS[task.priority] }} />}
         </button>
 
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-medium ${task.completed ? 'line-through text-slate-500' : 'text-white'}`}>
+          <p className={`text-sm font-semibold leading-snug ${task.completed ? 'line-through text-slate-500' : 'text-white'}`}>
             {task.title}
           </p>
           {task.description && (
-            <p className="text-xs text-slate-500 mt-0.5">{task.description}</p>
+            <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{task.description}</p>
           )}
-          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span
-              className="text-xs font-semibold"
+              className="inline-flex items-center gap-1 text-xs font-semibold"
               style={{ color: PRIORITY_COLORS[task.priority] }}
             >
-              <Flag size={9} className="inline mr-1" />
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: PRIORITY_COLORS[task.priority] }} />
               {PRIORITY_LABELS[task.priority]}
             </span>
             {task.date && (
-              <span className="text-xs text-slate-500">
-                <Calendar size={9} className="inline mr-1" />
-                {task.date}
+              <span className="text-xs text-slate-500">{task.date}</span>
+            )}
+            {task.period !== 'day' && (
+              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#1e2d40', color: '#64748b' }}>
+                {task.period}
               </span>
             )}
-            <span className="text-xs text-slate-600">
-              <Clock size={9} className="inline mr-1" />
-              {task.period}
-            </span>
             {task.goalId && (() => {
               const g = store.goals.find((gg) => gg.id === task.goalId)
               return g ? (
-                <span className="text-xs px-1.5 py-0.5 rounded max-w-30 truncate block" style={{ background: '#1e3a5f', color: '#60a5fa' }}>
+                <span className="text-xs px-1.5 py-0.5 rounded max-w-[120px] truncate" style={{ background: '#1e3a5f', color: '#60a5fa' }}>
                   {g.title}
                 </span>
               ) : null
@@ -219,7 +217,7 @@ function TaskItem({ task }: { task: Task }) {
           </div>
         </div>
 
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5">
           {canEdit ? (
             <>
               <button
@@ -322,7 +320,7 @@ export function TasksPage() {
       </div>
 
       {/* Priority filter */}
-      <div className="flex gap-2 mb-4 md:mb-5 flex-wrap">
+      <div className="flex gap-1.5 mb-3 md:mb-4 flex-wrap">
         {(['all', 'critical', 'high', 'medium', 'low'] as const).map((p) => (
           <button
             key={p}
@@ -367,9 +365,13 @@ export function TasksPage() {
         )}
         {sorted.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <CheckSquare size={48} className="text-slate-700 mb-3" />
-            <p className="text-slate-500 font-semibold">No tasks</p>
-            <p className="text-xs text-slate-600 mt-1">Add a task to get started</p>
+            <CheckSquare size={40} className="text-slate-700 mb-3" />
+            <p className="text-slate-500 font-semibold text-sm">No tasks</p>
+            <p className="text-xs text-slate-600 mt-1">
+              {filter !== 'all' || priorityFilter !== 'all'
+                ? 'No tasks match the current filters'
+                : 'Add your first task to stay on track'}
+            </p>
           </div>
         )}
       </div>
