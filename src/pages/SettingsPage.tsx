@@ -9,13 +9,16 @@ import { OnboardingModal } from '../components/OnboardingModal'
 import { ShareModal } from '../components/ShareModal'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured, uploadLogoToStorage } from '../lib/supabase'
+import { markOnboardingCompleted } from '../lib/onboarding'
 
 /** Static set of built-in category IDs — these can be renamed/recoloured but not deleted. */
 const DEFAULT_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map((c) => c.id))
 
 export function SettingsPage() {
-  const { store, updateSettings, setMonthTheme, addCategory, updateCategory, removeCategory, resetCategories } = usePlanner()
+  const { store, updateSettings, setMonthTheme, addCategory, updateCategory, removeCategory, resetCategories, currentYear } = usePlanner()
   const { user } = useAuth()
+  const userId = user?.id ?? null
+  const canUseBackgroundPush = isSupabaseConfigured && userId !== null && userId !== 'local-guest'
 
   const [orgName, setOrgName] = useState(store.organizationName)
   const [title, setTitle] = useState(store.plannerTitle)
@@ -36,11 +39,19 @@ export function SettingsPage() {
   }, [])
 
   useEffect(() => {
+    if (!canUseBackgroundPush) {
+      setPushStatus('unsubscribed')
+      return
+    }
     getPushStatus().then(setPushStatus)
-  }, [])
+  }, [canUseBackgroundPush])
 
   async function handleEnablePush() {
     setPushError(null)
+    if (!canUseBackgroundPush) {
+      setPushStatus('unsubscribed')
+      return
+    }
     // iOS Safari (non-installed) doesn't support push — guide user to install first
     if (isIOS() && !isStandalonePWA()) {
       setPushError('IOS_NOT_INSTALLED')
@@ -53,7 +64,7 @@ export function SettingsPage() {
       if (perm !== 'granted') return
     }
     setPushStatus('loading')
-    const result = await subscribeToPush(user?.id)
+    const result = await subscribeToPush(userId ?? undefined)
     if (result.ok) {
       setPushStatus('subscribed')
     } else {
@@ -63,6 +74,10 @@ export function SettingsPage() {
   }
 
   async function handleDisablePush() {
+    if (!canUseBackgroundPush) {
+      setPushStatus('unsubscribed')
+      return
+    }
     setPushStatus('loading')
     await unsubscribeFromPush()
     setPushStatus('unsubscribed')
@@ -97,7 +112,7 @@ export function SettingsPage() {
     e.preventDefault()
     updateSettings({ organizationName: orgName, plannerTitle: title, accentColor: accent })
     Object.entries(themes).forEach(([month, theme]) => {
-      setMonthTheme(Number(month), 2026, theme)
+      setMonthTheme(Number(month), currentYear, theme)
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -131,110 +146,103 @@ export function SettingsPage() {
   ]
 
   return (
-    <div className="p-4 md:p-6 max-w-2xl">
+    <div className="p-4 md:p-6 max-w-2xl pb-safe">
       <h2
-        className="text-xl font-black tracking-widest uppercase mb-6"
+        className="text-lg font-black tracking-widest uppercase mb-5"
         style={{ color: '#d4af37' }}
       >
         Settings
       </h2>
 
-      <form onSubmit={handleSettingsSave} className="space-y-8">
-        {/* Organisation */}
-        <section>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">
+      <form onSubmit={handleSettingsSave} className="space-y-4">
+        {/* ── Organisation ─────────────────────────────────────────────── */}
+        <section
+          className="rounded-xl p-4 space-y-3"
+          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
+        >
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
             Organisation
           </h3>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
-                Organisation Name
+              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">
+                Org Name
               </label>
               <input
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-                style={{
-                  background: '#1e2d40',
-                  border: '1px solid #243447',
-                  color: '#e2e8f0',
-                }}
+                style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">
                 Planner Title
               </label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-                style={{
-                  background: '#1e2d40',
-                  border: '1px solid #243447',
-                  color: '#e2e8f0',
-                }}
+                style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
               />
             </div>
+          </div>
 
+          <div className="flex items-center gap-4 flex-wrap">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
-                Accent Colour
+              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">
+                Accent
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={accent}
                   onChange={(e) => setAccent(e.target.value)}
-                  className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent"
+                  className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
                 />
-                <span className="text-sm font-mono text-slate-400">{accent}</span>
+                <span className="text-xs font-mono text-slate-400">{accent}</span>
               </div>
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">
                 Logo
               </label>
-              <label className="flex items-center gap-2 cursor-pointer w-fit">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors hover:bg-white/5"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors hover:bg-white/5"
                   style={{ border: '1px solid #243447', color: logoUploading ? '#d4af37' : '#94a3b8' }}
                 >
-                  <Upload size={13} className={logoUploading ? 'animate-spin' : ''} />
-                  {logoUploading ? 'Uploading…' : 'Upload Logo'}
+                  <Upload size={12} className={logoUploading ? 'animate-spin' : ''} />
+                  {logoUploading ? 'Uploading…' : 'Upload'}
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleLogoUpload}
-                />
+                <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
               </label>
-              {store.logoUrl && (
-                <img
-                  src={store.logoUrl}
-                  alt="Logo preview"
-                  className="mt-2 h-12 w-auto object-contain rounded"
-                />
-              )}
             </div>
+            {store.logoUrl && (
+              <img
+                src={store.logoUrl}
+                alt="Logo"
+                className="h-10 w-auto object-contain rounded"
+              />
+            )}
           </div>
         </section>
 
-        {/* Month Themes */}
-        <section>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">
-            Month Themes / Labels
+        {/* ── Month Themes ─────────────────────────────────────────────── */}
+        <section
+          className="rounded-xl p-4"
+          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
+        >
+          <h3 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
+            Month Themes
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {MONTH_NAMES.map((name, i) => {
               const month = i + 1
               return (
                 <div key={month} className="flex items-center gap-2">
                   <span
-                    className="text-xs font-semibold uppercase tracking-wider w-24 shrink-0"
+                    className="text-xs font-semibold uppercase tracking-wider w-20 shrink-0"
                     style={{ color: '#d4af37' }}
                   >
                     {name}
@@ -244,13 +252,9 @@ export function SettingsPage() {
                     onChange={(e) =>
                       setThemes((prev) => ({ ...prev, [month]: e.target.value }))
                     }
-                    placeholder="Monthly theme or label..."
-                    className="flex-1 px-2 py-1.5 rounded text-xs focus:outline-none"
-                    style={{
-                      background: '#1e2d40',
-                      border: '1px solid #243447',
-                      color: '#e2e8f0',
-                    }}
+                    placeholder="Theme or label…"
+                    className="flex-1 px-2 py-1 rounded text-xs focus:outline-none"
+                    style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
                   />
                 </div>
               )
@@ -258,11 +262,13 @@ export function SettingsPage() {
           </div>
         </section>
 
-        {/* Event Categories */}
-        <section>
-          {/* Header + Restore Defaults */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
+        {/* ── Event Categories ─────────────────────────────────────────── */}
+        <section
+          className="rounded-xl p-4"
+          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
               Event Categories
             </h3>
             <button
@@ -279,56 +285,54 @@ export function SettingsPage() {
             </button>
           </div>
 
-          {/* IDs of the four built-in defaults — cannot be deleted */}
-          <div className="space-y-2 mb-4">
+          <div className="space-y-1.5 mb-3">
             {store.categories.map((cat) => {
               const isDefault = DEFAULT_CATEGORY_IDS.has(cat.id)
               return (
-              <div key={cat.id} className="flex items-center gap-1">
-                {editingCatId === cat.id ? (
-                  <EditCategoryRow
-                    cat={cat}
-                    onSave={(patch) => { updateCategory(cat.id, patch); setEditingCatId(null) }}
-                    onCancel={() => setEditingCatId(null)}
-                  />
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setEditingCatId(cat.id)}
-                      className="flex flex-1 items-center gap-2 text-left py-1.5 px-2 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors min-w-0"
-                    >
-                      <span
-                        className="inline-block w-4 h-4 rounded shrink-0"
-                        style={{ background: cat.bgColor, border: `1px solid ${cat.color}` }}
-                      />
-                      <span className="flex-1 text-sm font-semibold truncate" style={{ color: cat.color }}>{cat.label}</span>
-                      <Pencil size={12} className="text-slate-500 shrink-0" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { if (confirm(`Delete "${cat.label}"?`)) removeCategory(cat.id) }}
-                      className="p-1.5 rounded transition-opacity disabled:opacity-25 disabled:cursor-not-allowed hover:bg-white/5"
-                      disabled={isDefault || store.categories.length <= 1}
-                      title={isDefault ? 'Built-in categories cannot be deleted' : store.categories.length <= 1 ? 'Cannot delete the last category' : `Delete ${cat.label}`}
-                    >
-                      <Trash2 size={12} className="text-red-400" />
-                    </button>
-                  </>
-                )}
-              </div>
-            )})
-            }
+                <div key={cat.id} className="flex items-center gap-1">
+                  {editingCatId === cat.id ? (
+                    <EditCategoryRow
+                      cat={cat}
+                      onSave={(patch) => { updateCategory(cat.id, patch); setEditingCatId(null) }}
+                      onCancel={() => setEditingCatId(null)}
+                    />
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setEditingCatId(cat.id)}
+                        className="flex flex-1 items-center gap-2 text-left py-1.5 px-2 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors min-w-0"
+                      >
+                        <span
+                          className="inline-block w-3.5 h-3.5 rounded shrink-0"
+                          style={{ background: cat.bgColor, border: `1px solid ${cat.color}` }}
+                        />
+                        <span className="flex-1 text-sm font-semibold truncate" style={{ color: cat.color }}>{cat.label}</span>
+                        <Pencil size={11} className="text-slate-600 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { if (confirm(`Delete "${cat.label}"?`)) removeCategory(cat.id) }}
+                        className="p-1.5 rounded transition-opacity disabled:opacity-25 disabled:cursor-not-allowed hover:bg-white/5"
+                        disabled={isDefault || store.categories.length <= 1}
+                        title={isDefault ? 'Built-in categories cannot be deleted' : store.categories.length <= 1 ? 'Cannot delete the last category' : `Delete ${cat.label}`}
+                      >
+                        <Trash2 size={11} className="text-red-400" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
-
           {/* Add new category */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 pt-2 flex-wrap" style={{ borderTop: '1px solid #1e2d40' }}>
             <input
               value={newCatLabel}
               onChange={(e) => setNewCatLabel(e.target.value)}
-              placeholder="New category name..."
-              className="flex-1 min-w-32 px-2 py-1.5 rounded text-xs focus:outline-none"
+              placeholder="New category name…"
+              className="flex-1 min-w-28 px-2 py-1.5 rounded text-xs focus:outline-none"
               style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && newCatLabel.trim()) {
@@ -340,12 +344,12 @@ export function SettingsPage() {
             <div className="flex items-center gap-1">
               <label className="text-xs text-slate-500">Text</label>
               <input type="color" value={newCatColor} onChange={(e) => setNewCatColor(e.target.value)}
-                className="w-8 h-7 rounded cursor-pointer border-0 bg-transparent" />
+                className="w-7 h-6 rounded cursor-pointer border-0 bg-transparent" />
             </div>
             <div className="flex items-center gap-1">
               <label className="text-xs text-slate-500">Fill</label>
               <input type="color" value={newCatBg} onChange={(e) => setNewCatBg(e.target.value)}
-                className="w-8 h-7 rounded cursor-pointer border-0 bg-transparent" />
+                className="w-7 h-6 rounded cursor-pointer border-0 bg-transparent" />
             </div>
             <button
               type="button"
@@ -362,27 +366,29 @@ export function SettingsPage() {
           </div>
         </section>
 
-        {/* Notifications */}
-        <section>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Notifications</h3>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 flex-wrap">
-              {notifPerm === 'granted' ? (
-                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#34d399' }}>
-                  <Bell size={13} /> Notifications enabled
-                </span>
-              ) : notifPerm === 'denied' ? (
-                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#f87171' }}>
-                  <BellOff size={13} /> Blocked — enable in your browser/OS settings
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleEnableNotifications}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
-                  style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
-                >
-                  <Bell size={14} /> Enable Notifications
+        {/* ── Notifications ─────────────────────────────────────────────── */}
+        <section
+          className="rounded-xl p-4 space-y-3"
+          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
+        >
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Notifications</h3>
+          <div className="flex items-center gap-3 flex-wrap">
+            {notifPerm === 'granted' ? (
+              <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#34d399' }}>
+                <Bell size={13} /> Notifications enabled
+              </span>
+            ) : notifPerm === 'denied' ? (
+              <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#f87171' }}>
+                <BellOff size={13} /> Blocked — enable in your browser/OS settings
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleEnableNotifications}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+                style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
+              >
+                <Bell size={14} /> Enable Notifications
                 </button>
               )}
               {notifPerm === 'granted' && (
@@ -405,7 +411,11 @@ export function SettingsPage() {
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>
                 Background Push (when app is closed)
               </p>
-              {pushStatus === 'unsupported' ? (
+              {!canUseBackgroundPush ? (
+                <p className="text-xs" style={{ color: '#64748b' }}>
+                  Background push requires Supabase-backed accounts and a configured cron job.
+                </p>
+              ) : pushStatus === 'unsupported' ? (
                 <p className="text-xs" style={{ color: '#64748b' }}>Not supported in this browser</p>
               ) : pushStatus === 'denied' ? (
                 <p className="text-xs" style={{ color: '#f87171' }}>Blocked — enable notifications in browser settings first</p>
@@ -443,6 +453,8 @@ export function SettingsPage() {
                     <p className="mt-2 text-xs" style={{ color: '#f87171' }}>
                       {pushError === 'PERMISSION_DENIED'
                         ? 'Permission denied — check browser notification settings.'
+                        : pushError === 'SUPABASE_REQUIRED'
+                        ? 'Background push requires Supabase-backed sync and a signed-in account.'
                         : pushError === 'SW_TIMEOUT'
                         ? 'Service worker timed out — try refreshing the page.'
                         : `Failed: ${pushError}`}
@@ -454,28 +466,30 @@ export function SettingsPage() {
                 Requires Supabase + cron job (/api/send-reminders every minute via cron-job.org).
               </p>
             </div>
-          </div>
         </section>
 
-        {/* Sharing */}
-        <section>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">
+        {/* ── Sharing ───────────────────────────────────────────────────── */}
+        <section
+          className="rounded-xl p-4 space-y-3"
+          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
+        >
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
             Sharing
           </h3>
           {isSupabaseConfigured ? (
-            <div className="space-y-3">
+            <>
               <p className="text-xs text-slate-500">
                 Create a read-only share link. Anyone with the link can view your planner without signing in.
               </p>
               <button
                 type="button"
                 onClick={() => setShowShareModal(true)}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all hover:opacity-90 w-full sm:w-auto"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
                 style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
               >
                 <Share2 size={14} /> Manage Share Links
               </button>
-            </div>
+            </>
           ) : (
             <p className="text-xs text-slate-500">
               Sharing requires Supabase. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.
@@ -483,35 +497,34 @@ export function SettingsPage() {
           )}
         </section>
 
-        {/* Save */}
-        <button
-          type="submit"
-          className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-colors"
-          style={{ background: saved ? '#16a34a' : '#d4af37', color: '#111827' }}
-        >
-          <Save size={14} />
-          {saved ? 'Saved!' : 'Save Settings'}
-        </button>
+        {/* ── Save ─────────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between pt-2">
+          <button
+            type="button"
+            onClick={() => setShowOnboarding(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors hover:bg-white/5"
+            style={{ border: '1px solid #243447', color: '#64748b' }}
+          >
+            <RotateCcw size={12} />
+            Setup Wizard
+          </button>
+          <button
+            type="submit"
+            className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-colors"
+            style={{ background: saved ? '#16a34a' : '#d4af37', color: '#111827', minHeight: '44px' }}
+          >
+            <Save size={14} />
+            {saved ? 'Saved!' : 'Save Settings'}
+          </button>
+        </div>
       </form>
-
-      {/* Re-run onboarding */}
-      <div className="mt-8 pt-6" style={{ borderTop: '1px solid #1e2d40' }}>
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">Onboarding</h3>
-        <button
-          type="button"
-          onClick={() => setShowOnboarding(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-colors hover:bg-white/5"
-          style={{ border: '1px solid #243447', color: '#94a3b8' }}
-        >
-          <RotateCcw size={13} />
-          Re-run Setup Wizard
-        </button>
-      </div>
 
       {showOnboarding && (
         <OnboardingModal
           onComplete={() => {
-            localStorage.setItem('yearplanner_onboarded', 'true')
+            if (user?.id) {
+              markOnboardingCompleted(user.id)
+            }
             setShowOnboarding(false)
           }}
         />

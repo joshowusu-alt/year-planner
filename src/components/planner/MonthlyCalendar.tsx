@@ -83,12 +83,12 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
   return (
     <div
       ref={isMobile ? undefined : setNodeRef}
-      className={`min-h-16 md:min-h-24 p-1 md:p-1.5 flex flex-col border-b border-r group cursor-pointer transition-colors hover:bg-white/5 ${
+      className={`min-h-14 md:min-h-24 p-1 md:p-1.5 flex flex-col border-b border-r cursor-pointer transition-colors hover:bg-white/5 ${
         !isCurrentMonth ? 'opacity-30' : ''
       }`}
       style={{
         borderColor: showHighlight ? '#d4af37' : '#1e2d40',
-        ...(today ? { borderTop: '2px solid #d4af37' } : {}),
+        ...(today ? { background: 'rgba(212,175,55,0.05)', borderTop: '2px solid #d4af37' } : {}),
         ...(showHighlight ? { background: 'rgba(212,175,55,0.08)' } : {}),
       }}
       onClick={() => onAddEvent(dateStr)}
@@ -116,15 +116,15 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
       </div>
 
       {/* Events */}
-      <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
-        {events.slice(0, 3).map((ev) => {
+      <div className="flex flex-col gap-px flex-1 overflow-hidden">
+        {events.slice(0, isMobile ? 2 : 3).map((ev) => {
           const catStyle = getCategoryStyle(ev.category, store.categories)
           return isMobile ? (
             <button
               key={ev.id}
-              className="text-left text-xs px-1 py-0.5 rounded truncate leading-tight w-full"
+              className="text-left px-0.5 py-px rounded truncate leading-tight w-full"
               aria-label={ev.title}
-              style={{ background: catStyle.bgColor, color: catStyle.color }}
+              style={{ background: catStyle.bgColor, color: catStyle.color, fontSize: '0.6rem' }}
               onClick={(e) => { e.stopPropagation(); onEditEvent(ev) }}
             >
               {ev.title}
@@ -139,8 +139,10 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
             />
           )
         })}
-        {events.length > 3 && (
-          <span className="text-xs text-slate-500 px-1">+{events.length - 3} more</span>
+        {events.length > (isMobile ? 2 : 3) && (
+          <span className="px-0.5 leading-tight" style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 600 }}>
+            +{events.length - (isMobile ? 2 : 3)}
+          </span>
         )}
       </div>
 
