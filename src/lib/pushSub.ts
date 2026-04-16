@@ -47,6 +47,9 @@ export async function getPushStatus(): Promise<PushStatus> {
 
 export async function subscribeToPush(userId?: string): Promise<{ ok: boolean; error?: string }> {
   try {
+    if (!userId || userId === 'local-guest') {
+      return { ok: false, error: 'SUPABASE_REQUIRED' }
+    }
     const vapidKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined)?.trim()
     if (!vapidKey) {
       console.error('VITE_VAPID_PUBLIC_KEY is not set')

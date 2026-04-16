@@ -8,6 +8,14 @@ export interface ShareRecord {
   label?: string
 }
 
+export const SHARE_LINK_TTL_DAYS = 90
+
+function getShareExpiryCutoff(): string {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - SHARE_LINK_TTL_DAYS)
+  return cutoff.toISOString()
+}
+
 /**
  * Creates a new share token for the given userId.
  * Inserts into `planner_shares` table.
@@ -68,6 +76,12 @@ export async function revokeShareToken(
 export async function getShareTokens(userId: string): Promise<ShareRecord[]> {
   if (!supabase) return []
   try {
+    await supabase
+      .from('planner_shares')
+      .delete()
+      .eq('owner_user_id', userId)
+      .lt('created_at', getShareExpiryCutoff())
+
     const { data, error } = await supabase
       .from('planner_shares')
       .select('token, owner_user_id, created_at, label')
@@ -96,11 +110,16 @@ export async function fetchSharedPlannerData(
     // 1. Resolve token → owner_user_id
     const { data: shareRow, error: shareErr } = await supabase
       .from('planner_shares')
-      .select('owner_user_id, label')
+      .select('owner_user_id, created_at, label')
       .eq('token', token)
       .single()
     if (shareErr || !shareRow) {
       console.error('fetchSharedPlannerData – token lookup failed:', shareErr?.message)
+      return null
+    }
+
+    if (shareRow.created_at < getShareExpiryCutoff()) {
+      console.error('fetchSharedPlannerData – token expired')
       return null
     }
 

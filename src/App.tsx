@@ -24,6 +24,7 @@ import { SearchPage } from './pages/SearchPage'
 import { SharedPlannerView } from './components/SharedPlannerView'
 import { useBreakpoint } from './hooks/useMediaQuery'
 import { useReminders } from './hooks/useReminders'
+import { hasCompletedOnboarding, markOnboardingCompleted } from './lib/onboarding'
 
 function AppShell() {
   const { user, loading } = useAuth()
@@ -58,7 +59,7 @@ function AppShell() {
 
   useEffect(() => {
     if (!user?.id) return
-    setShowOnboarding(!localStorage.getItem(`yearplanner_onboarded_${user.id}`))
+    setShowOnboarding(!hasCompletedOnboarding(user.id))
   }, [user?.id])
 
   // Close drawer when switching to desktop
@@ -149,7 +150,9 @@ function AppShell() {
       {showOnboarding && (
         <OnboardingModal
           onComplete={() => {
-            localStorage.setItem(`yearplanner_onboarded_${user!.id}`, 'true')
+            if (user?.id) {
+              markOnboardingCompleted(user.id)
+            }
             setShowOnboarding(false)
           }}
         />

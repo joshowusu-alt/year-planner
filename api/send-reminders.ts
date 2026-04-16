@@ -60,6 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .from('push_subscriptions')
     .select('*')
 
+  if (plannerErr) return res.status(500).json({ error: plannerErr.message })
   if (subErr) return res.status(500).json({ error: subErr.message })
 
   let sent = 0
@@ -69,10 +70,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const events: PlannerEvent[] = row.store?.events ?? []
     const userId: string = row.user_id
 
-    // Find subscriptions for this user (or all if userId is not stored per subscription)
-    const userSubs = subscriptions?.filter(s =>
-      s.user_id === userId || s.user_id === null
-    ) ?? []
+    // Never reuse an unscoped subscription across multiple users.
+    const userSubs = subscriptions?.filter((s) => s.user_id === userId) ?? []
 
     if (userSubs.length === 0) continue
 

@@ -1,73 +1,99 @@
-# React + TypeScript + Vite
+# STRATUM Planner
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+STRATUM is a planning app for yearly strategy, monthly themes, weekly execution, and day-to-day scheduling. It combines a year planner, calendar views, goals, tasks, notes, strategic review tools, natural-language event entry, read-only sharing, and browser/push reminders.
 
-Currently, two official plugins are available:
+## Core features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Annual, monthly, and weekly planning views
+- Goals, milestones, tasks, and notes
+- Strategy workspace with Vital Few and weekly review flows
+- Natural-language quick add for events
+- Local-first storage with optional Supabase sync
+- Read-only share links
+- In-app reminders plus optional background push reminders
+- PWA support for installable/mobile use
 
-## React Compiler
+## Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS v4
+- Supabase
+- Vercel serverless functions
+- Workbox / `vite-plugin-pwa`
 
-## Expanding the ESLint configuration
+## Recommended environment
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Node.js 22.x**
+- Keep the project **outside OneDrive-synced folders** when possible for more reliable lint/build behavior on Windows.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Getting started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1. Install dependencies:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+   ```powershell
+   npm install
+   ```
+
+2. Start the app:
+
+   ```powershell
+   npm run dev
+   ```
+
+3. Create a production build:
+
+   ```powershell
+   npm run build
+   ```
+
+4. Run the parser tests:
+
+   ```powershell
+   npm test
+   ```
+
+## Environment variables
+
+### Frontend (`.env`)
+
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_VAPID_PUBLIC_KEY=
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+If Supabase keys are omitted, the app falls back to local storage and signs in as a local guest.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Serverless / deployment environment
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+```
+
+## Supabase setup
+
+The repository includes SQL helpers for optional backend features:
+
+- `src/lib/push_subscriptions_migration.sql`
+- `src/lib/sharing_migration.sql`
+
+Run them in the Supabase SQL editor if you want push reminders and share links.
+
+## Notifications and reminders
+
+- In-app reminders work while STRATUM is open in the browser.
+- Background push requires Supabase, a configured VAPID keypair, and a cron job that calls `/api/send-reminders`.
+- Share links are read-only and expire after 90 days.
+
+## Validation commands
+
+```powershell
+npm run lint
+npm test
+npm run build
 ```

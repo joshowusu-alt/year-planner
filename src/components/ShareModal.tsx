@@ -6,6 +6,7 @@ import {
   revokeShareToken,
   getShareTokens,
   checkSharesTableExists,
+  SHARE_LINK_TTL_DAYS,
   type ShareRecord,
 } from '../lib/sharing'
 import { useAuth } from '../context/AuthContext'
@@ -190,7 +191,7 @@ export function ShareModal({ onClose }: Props) {
                 Share Your Planner
               </h2>
               <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>
-                Share a read-only view of your planner with anyone
+                Share a read-only view of your planner with anyone. Links expire after {SHARE_LINK_TTL_DAYS} days.
               </p>
             </div>
             <button

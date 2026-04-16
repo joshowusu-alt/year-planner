@@ -6,6 +6,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).end()
     const { subscription, userId } = req.body as { subscription: PushSubscriptionJSON; userId?: string }
     if (!subscription?.endpoint) return res.status(400).json({ error: 'Missing subscription' })
+    if (!userId || userId === 'local-guest') {
+      return res.status(400).json({ error: 'Background push requires a Supabase-backed user.' })
+    }
 
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -18,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { error } = await supabase.from('push_subscriptions').upsert({
       endpoint: subscription.endpoint,
       subscription: subscription,
-      user_id: userId ?? null,
+      user_id: userId,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'endpoint' })
 
