@@ -63,7 +63,7 @@ import {
 interface PlannerContextValue {
   store: PlannerStore
   // Events
-  addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null) => void
+  addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null, timezone?: string) => void
   bulkAddEvents: (events: Array<Omit<PlannerEvent, 'id' | 'createdAt' | 'updatedAt'>>) => void
   editEvent: (id: string, patch: Partial<PlannerEvent>) => void
   removeEvent: (id: string) => void
@@ -188,8 +188,8 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   }, [store, user?.id])
 
   // ── Events ──
-  const addEvent = useCallback((date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null) => {
-    setStore((s) => createEvent(s, { date, title, category, notes, recurrence, startTime, endTime, reminder }))
+  const addEvent = useCallback((date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null, timezone?: string) => {
+    setStore((s) => createEvent(s, { date, title, category, notes, recurrence, startTime, endTime, reminder, timezone }))
   }, [])
 
   const bulkAddEvents = useCallback((events: Array<Omit<PlannerEvent, 'id' | 'createdAt' | 'updatedAt'>>) => {
