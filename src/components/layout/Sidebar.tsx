@@ -87,12 +87,12 @@ export function Sidebar({ page, onNavigate, onExportRequest }: Props) {
         })}
       </nav>
 
-      {/* Bottom: export + settings + user */}
+      {/* Bottom: settings + user */}
       <div className="px-3 pb-4 space-y-1" style={{ borderTop: '1px solid #1e2d40', paddingTop: '0.75rem' }}>
         {onExportRequest && (
           <button
             onClick={onExportRequest}
-            className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
+            className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
             style={{ color: '#94a3b8' }}
             title="Export as PDF"
           >

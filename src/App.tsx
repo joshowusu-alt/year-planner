@@ -36,9 +36,7 @@ function AppShell() {
   useReminders()
   const { pushUndo, toastNode } = useUndoToast()
 
-  // Hash-based routing: read initial page from hash, sync hash on page change.
-  // NOTE: OAuth callbacks land with #access_token=... in the hash — we must
-  // never treat those as navigation hashes or clear them before Supabase reads them.
+  // Hash-based routing: read initial page from hash, sync hash on page change
   const getPageFromHash = (): Page => {
     const hash = window.location.hash.slice(1) as Page
     const validPages: Page[] = ['planner','monthly','weekly','goals','tasks','notes','settings','strategy','search','dashboard']
@@ -83,11 +81,13 @@ function AppShell() {
   useEffect(() => {
     pageRef.current = page
     // Never touch the URL if it contains an OAuth callback token — Supabase reads
-    // #access_token= asynchronously; clearing it before that happens breaks login.
+    // #access_token= asynchronously and clearing it before it can do so will break login.
     if (window.location.hash.startsWith('#access_token') || window.location.hash.startsWith('#error_description')) return
     // Keep URL hash in sync so users can share/bookmark pages and use browser back
     const newHash = page === 'planner' ? '' : `#${page}`
     if (window.location.hash !== newHash) {
+      // Use replaceState to avoid polluting history stack on every tab switch;
+      // only pushState when navigating away from planner (intentional navigation).
       if (page === 'planner') {
         window.history.replaceState(null, '', window.location.pathname + window.location.search)
       } else {
