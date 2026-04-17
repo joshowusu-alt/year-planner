@@ -40,14 +40,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSupabaseUser(data.session?.user ?? null)
+    // Subscribe BEFORE resolving the session so we never miss a SIGNED_IN event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSupabaseUser(session?.user ?? null)
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSupabaseUser(session?.user ?? null)
-    })
+    // Handle PKCE code-exchange: after Google OAuth, Supabase v2 redirects back with
+    // ?code=xxx. We must call exchangeCodeForSession() explicitly — getSession() alone
+    // won’t complete the exchange in time before loading is cleared.
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    if (code) {
+      // Capture the full search string before cleaning the URL
+      const originalSearch = window.location.search
+      // Clean the code from the URL immediately so a refresh doesn’t re-attempt it
+      window.history.replaceState(null, '', window.location.pathname + window.location.hash)
+      supabase.auth.exchangeCodeForSession(originalSearch).catch(() => {
+        // Exchange failed — fall through to a regular session check
+        supabase!.auth.getSession().then(({ data }) => {
+          setSupabaseUser(data.session?.user ?? null)
+          setLoading(false)
+        })
+      })
+      // On success, onAuthStateChange fires SIGNED_IN → setLoading(false)
+    } else {
+      // Normal load — check for an existing session
+      supabase.auth.getSession().then(({ data }) => {
+        setSupabaseUser(data.session?.user ?? null)
+        setLoading(false)
+      })
+    }
 
     return () => subscription.unsubscribe()
   }, [])
