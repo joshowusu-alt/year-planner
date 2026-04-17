@@ -1,4 +1,4 @@
-import { X, FileText, Settings, LogOut, CheckSquare, Layers } from 'lucide-react'
+import { X, FileText, Settings, LogOut, CheckSquare, Layers, BarChart2, Search } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { usePlanner } from '../../context/PlannerContext'
 import type { Page } from './Sidebar'
@@ -11,10 +11,12 @@ interface Props {
 }
 
 const drawerItems: { id: Page; label: string; icon: React.ElementType }[] = [
-  { id: 'tasks',    label: 'Tasks',    icon: CheckSquare },
-  { id: 'strategy', label: 'Strategy', icon: Layers },
-  { id: 'notes',    label: 'Notes',    icon: FileText },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'tasks',     label: 'Tasks',     icon: CheckSquare },
+  { id: 'strategy',  label: 'Strategy',  icon: Layers },
+  { id: 'dashboard', label: 'Dashboard', icon: BarChart2 },
+  { id: 'search',    label: 'Search',    icon: Search },
+  { id: 'notes',     label: 'Notes',     icon: FileText },
+  { id: 'settings',  label: 'Settings',  icon: Settings },
 ]
 
 export function MobileDrawer({ open, onClose, page, onNavigate }: Props) {

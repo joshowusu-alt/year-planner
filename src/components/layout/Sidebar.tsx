@@ -1,8 +1,8 @@
-import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers, Search } from 'lucide-react'
+import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers, Search, BarChart2 } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import { useAuth } from '../../context/AuthContext'
 
-export type Page = 'planner' | 'monthly' | 'weekly' | 'goals' | 'tasks' | 'notes' | 'settings' | 'strategy' | 'search'
+export type Page = 'planner' | 'monthly' | 'weekly' | 'goals' | 'tasks' | 'notes' | 'settings' | 'strategy' | 'search' | 'dashboard'
 
 interface Props {
   page: Page
@@ -14,14 +14,15 @@ export function Sidebar({ page, onNavigate }: Props) {
   const { user, signOut, isConfigured } = useAuth()
 
   const mainItems: { id: Page; label: string; icon: React.ElementType }[] = [
-    { id: 'planner',  label: 'Annual View', icon: CalendarDays },
-    { id: 'monthly',  label: 'Monthly View', icon: CalendarRange },
-    { id: 'weekly',   label: 'Weekly View',  icon: Calendar },
-    { id: 'goals',    label: 'Goals',        icon: Target },
-    { id: 'tasks',    label: 'Tasks',        icon: CheckSquare },
-    { id: 'strategy', label: 'Strategy',     icon: Layers },
-    { id: 'notes',    label: 'Notes',        icon: FileText },
-    { id: 'search',   label: 'Search',       icon: Search },
+    { id: 'planner',   label: 'Annual View',  icon: CalendarDays },
+    { id: 'monthly',   label: 'Monthly View', icon: CalendarRange },
+    { id: 'weekly',    label: 'Weekly View',  icon: Calendar },
+    { id: 'goals',     label: 'Goals',        icon: Target },
+    { id: 'tasks',     label: 'Tasks',        icon: CheckSquare },
+    { id: 'strategy',  label: 'Strategy',     icon: Layers },
+    { id: 'dashboard', label: 'Dashboard',    icon: BarChart2 },
+    { id: 'notes',     label: 'Notes',        icon: FileText },
+    { id: 'search',    label: 'Search',       icon: Search },
   ]
 
   const bottomItems: { id: Page; label: string; icon: React.ElementType }[] = [
