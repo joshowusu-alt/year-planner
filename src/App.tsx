@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PlannerProvider } from './context/PlannerContext'
 import { usePlanner } from './context/PlannerContext'
@@ -25,6 +25,7 @@ import { SharedPlannerView } from './components/SharedPlannerView'
 import { useBreakpoint } from './hooks/useMediaQuery'
 import { useReminders } from './hooks/useReminders'
 import { hasCompletedOnboarding, markOnboardingCompleted } from './lib/onboarding'
+import { PLANNER_PRINT_REQUEST_EVENT } from './lib/plannerNavigation'
 
 function AppShell() {
   const { user, loading } = useAuth()
@@ -36,6 +37,8 @@ function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileAddEvent, setMobileAddEvent] = useState(false)
   const [showNLInput, setShowNLInput] = useState(false)
+  const pageRef = useRef<Page>('planner')
+  const pendingPrintRef = useRef(false)
   const [shareToken, setShareToken] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search)
     return params.get('share')
@@ -62,10 +65,40 @@ function AppShell() {
     setShowOnboarding(!hasCompletedOnboarding(user.id))
   }, [user?.id])
 
+  useEffect(() => {
+    pageRef.current = page
+  }, [page])
+
   // Close drawer when switching to desktop
   useEffect(() => {
     if (!isMobile) setDrawerOpen(false)
   }, [isMobile])
+
+  useEffect(() => {
+    const handlePlannerPrintRequest = () => {
+      if (pageRef.current === 'planner') {
+        window.setTimeout(() => window.print(), 75)
+        return
+      }
+
+      pendingPrintRef.current = true
+      setPage('planner')
+    }
+
+    window.addEventListener(PLANNER_PRINT_REQUEST_EVENT, handlePlannerPrintRequest)
+    return () => window.removeEventListener(PLANNER_PRINT_REQUEST_EVENT, handlePlannerPrintRequest)
+  }, [])
+
+  useEffect(() => {
+    if (page !== 'planner' || !pendingPrintRef.current) return
+
+    const timeoutId = window.setTimeout(() => {
+      window.print()
+      pendingPrintRef.current = false
+    }, 75)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [page])
 
   if (loading) {
     return (

@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react'
-import { Save, Upload, Plus, Trash2, Pencil, X, RotateCcw, Share2, Bell, BellOff, BellRing } from 'lucide-react'
+import { Save, Upload, Plus, Trash2, Pencil, X, RotateCcw, Share2, Bell, BellOff, BellRing, FileDown, Printer, FileSpreadsheet, FileUp } from 'lucide-react'
 import { requestNotificationPermission } from '../lib/notifications'
 import { subscribeToPush, unsubscribeFromPush, getPushStatus, isIOS, isStandalonePWA, type PushStatus } from '../lib/pushSub'
 import { usePlanner } from '../context/PlannerContext'
@@ -7,9 +7,14 @@ import type { EventCategoryDef } from '../types'
 import { DEFAULT_CATEGORIES } from '../types'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { ShareModal } from '../components/ShareModal'
+import { IcsImportModal } from '../components/IcsImportModal'
+import { TableImportModal } from '../components/TableImportModal'
 import { useAuth } from '../context/AuthContext'
 import { isSupabaseConfigured, uploadLogoToStorage } from '../lib/supabase'
 import { markOnboardingCompleted } from '../lib/onboarding'
+import { exportToCSV } from '../lib/storage'
+import { downloadPlannerImportTemplate } from '../lib/tableImport'
+import { requestPlannerPrintExport } from '../lib/plannerNavigation'
 
 /** Static set of built-in category IDs — these can be renamed/recoloured but not deleted. */
 const DEFAULT_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map((c) => c.id))
@@ -27,6 +32,8 @@ export function SettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showIcsImport, setShowIcsImport] = useState(false)
+  const [showTableImport, setShowTableImport] = useState(false)
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   )
@@ -146,7 +153,7 @@ export function SettingsPage() {
   ]
 
   return (
-    <div className="p-4 md:p-6 max-w-2xl pb-safe">
+    <div className="p-4 md:p-6 max-w-4xl pb-safe">
       <h2
         className="text-lg font-black tracking-widest uppercase mb-5"
         style={{ color: '#d4af37' }}
@@ -468,33 +475,103 @@ export function SettingsPage() {
             </div>
         </section>
 
-        {/* ── Sharing ───────────────────────────────────────────────────── */}
         <section
           className="rounded-xl p-4 space-y-3"
           style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
         >
           <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
-            Sharing
+            Import, Export & Share
           </h3>
-          {isSupabaseConfigured ? (
-            <>
-              <p className="text-xs text-slate-500">
-                Create a read-only share link. Anyone with the link can view your planner without signing in.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowShareModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
-                style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
-              >
-                <Share2 size={14} /> Manage Share Links
-              </button>
-            </>
-          ) : (
-            <p className="text-xs text-slate-500">
-              Sharing requires Supabase. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.
-            </p>
-          )}
+          <p className="text-xs text-slate-500">
+            Bring plans in from calendar files or spreadsheets, especially if they started life in Word or PDF. Export as CSV, print to PDF, or share a read-only link from one place.
+          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div
+              className="rounded-xl p-4 space-y-3"
+              style={{ background: '#111827', border: '1px solid #1e2d40' }}
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
+                  Import
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Use one-time imports with preview before anything is saved.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowIcsImport(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+                  style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
+                >
+                  <Upload size={14} /> Import .ics Calendar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTableImport(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+                  style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
+                >
+                  <FileSpreadsheet size={14} /> Import CSV / Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadPlannerImportTemplate}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                  style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
+                >
+                  <FileUp size={14} /> Download Template
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="rounded-xl p-4 space-y-3"
+              style={{ background: '#111827', border: '1px solid #1e2d40' }}
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
+                  Export & share
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Export a working file, create a PDF-ready printout, or send a secure read-only link.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => exportToCSV(store)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                  style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
+                >
+                  <FileDown size={14} /> Export CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={requestPlannerPrintExport}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                  style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
+                >
+                  <Printer size={14} /> Print / PDF
+                </button>
+                {isSupabaseConfigured ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowShareModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                    style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
+                  >
+                    <Share2 size={14} /> Manage Share Links
+                  </button>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Share links require Supabase. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable them.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* ── Save ─────────────────────────────────────────────────────── */}
@@ -532,6 +609,14 @@ export function SettingsPage() {
 
       {showShareModal && (
         <ShareModal onClose={() => setShowShareModal(false)} />
+      )}
+
+      {showIcsImport && (
+        <IcsImportModal onClose={() => setShowIcsImport(false)} />
+      )}
+
+      {showTableImport && (
+        <TableImportModal onClose={() => setShowTableImport(false)} />
       )}
     </div>
   )
