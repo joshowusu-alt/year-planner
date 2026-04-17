@@ -29,6 +29,7 @@ import {
   loadStoreFromSupabase,
   saveStoreToSupabase,
   createEvent,
+  bulkCreateEvents,
   updateEvent,
   deleteEvent,
   updateMonthMeta,
@@ -63,6 +64,7 @@ interface PlannerContextValue {
   store: PlannerStore
   // Events
   addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null) => void
+  bulkAddEvents: (events: Array<Omit<PlannerEvent, 'id' | 'createdAt' | 'updatedAt'>>) => void
   editEvent: (id: string, patch: Partial<PlannerEvent>) => void
   removeEvent: (id: string) => void
   editEventInstance: (baseId: string, dateStr: string, patch: { title?: string; category?: string; notes?: string; startTime?: string; endTime?: string }) => void
@@ -188,6 +190,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   // ── Events ──
   const addEvent = useCallback((date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null) => {
     setStore((s) => createEvent(s, { date, title, category, notes, recurrence, startTime, endTime, reminder }))
+  }, [])
+
+  const bulkAddEvents = useCallback((events: Array<Omit<PlannerEvent, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    setStore((s) => bulkCreateEvents(s, events))
   }, [])
 
   const editEvent = useCallback((id: string, patch: Partial<PlannerEvent>) => {
@@ -335,7 +341,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   return (
     <PlannerContext.Provider value={{
       store,
-      addEvent, editEvent, removeEvent, editEventInstance, removeEventOccurrence, getEventsForDate, setMonthTheme,
+      addEvent, bulkAddEvents, editEvent, removeEvent, editEventInstance, removeEventOccurrence, getEventsForDate, setMonthTheme,
       addGoal, editGoal, removeGoal,
       addMilestoneToGoal, editMilestone, removeMilestone,
       addTask, editTask, removeTask, toggleTask,
