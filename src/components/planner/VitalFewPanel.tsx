@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { usePlanner } from '../../context/PlannerContext'
 import type { VitalFew } from '../../types'
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────────
 
 export function VitalFewPanel() {
   const ctx = usePlanner()
@@ -99,11 +99,14 @@ export function VitalFewPanel() {
                 >
                   {item.title}
                 </span>
-                {item.goalId && (
-                  <span className="mt-0.5 block text-xs text-[#94a3b8]">
-                    Linked to goal
-                  </span>
-                )}
+                {item.goalId && (() => {
+                  const linked = store.goals.find((g) => g.id === item.goalId)
+                  return linked ? (
+                    <span className="mt-0.5 block text-xs truncate" style={{ color: '#60a5fa' }}>
+                      ↗ {linked.title}
+                    </span>
+                  ) : null
+                })()}
               </div>
 
               {/* Actions */}
