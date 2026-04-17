@@ -6,12 +6,18 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 // Will be null/undefined if env vars aren't set — app falls back to localStorage
 export const supabase =
   supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          flowType: 'implicit',      // tokens returned in URL hash — no PKCE code exchange needed
+          detectSessionInUrl: true,  // auto-reads #access_token= on page load
+          persistSession: true,
+        },
+      })
     : null
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
-// ─── Storage helpers ──────────────────────────────────────────────────────────
+// ─── Storage helpers ───────────────────────────────────────────────────────────────────
 
 const LOGO_BUCKET = 'logos'
 
