@@ -22,6 +22,8 @@ import { EventModal } from './components/planner/EventModal'
 import { StrategyPage } from './pages/StrategyPage'
 import { SearchPage } from './pages/SearchPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { ExportModal } from './components/ExportModal'
+import { PrintLayout } from './components/PrintLayout'
 import { SharedPlannerView } from './components/SharedPlannerView'
 import { useBreakpoint } from './hooks/useMediaQuery'
 import { useReminders } from './hooks/useReminders'
@@ -46,6 +48,8 @@ function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileAddEvent, setMobileAddEvent] = useState(false)
   const [showNLInput, setShowNLInput] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportConfig, setExportConfig] = useState<{ year: number; months: number[] } | null>(null)
   const pageRef = useRef<Page>('planner')
   const pendingPrintRef = useRef(false)
   const [shareToken, setShareToken] = useState<string | null>(() => {
@@ -96,6 +100,21 @@ function AppShell() {
     return () => window.removeEventListener('popstate', handlePopState)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Trigger window.print() after PrintLayout has mounted
+  useEffect(() => {
+    if (!exportConfig) return
+    const id = window.setTimeout(() => window.print(), 300)
+    return () => window.clearTimeout(id)
+  }, [exportConfig])
+
+  // Clean up export config after the print dialog closes
+  useEffect(() => {
+    if (!exportConfig) return
+    const cleanup = () => setExportConfig(null)
+    window.addEventListener('afterprint', cleanup)
+    return () => window.removeEventListener('afterprint', cleanup)
+  }, [exportConfig])
 
   // Close drawer when switching to desktop
   useEffect(() => {
@@ -151,10 +170,10 @@ function AppShell() {
 
   return (
     <UndoContext.Provider value={{ pushUndo }}>
-    <div className="flex flex-col w-full max-w-full overflow-x-hidden md:flex-row" style={{ background: '#0a0e1a', color: '#e2e8f0', height: '100%' }}>
+    <div id="app-shell" className="flex flex-col w-full max-w-full overflow-x-hidden md:flex-row" style={{ background: '#0a0e1a', color: '#e2e8f0', height: '100%' }}>
       {/* Desktop / Tablet sidebar */}
       <div className="hidden md:block">
-        <Sidebar page={page} onNavigate={setPage} />
+        <Sidebar page={page} onNavigate={setPage} onExportRequest={() => setShowExportModal(true)} />
       </div>
 
       {/* Mobile drawer */}
@@ -163,6 +182,7 @@ function AppShell() {
         onClose={() => setDrawerOpen(false)}
         page={page}
         onNavigate={setPage}
+        onExportRequest={() => setShowExportModal(true)}
       />
 
       <div className="flex-1 min-h-0 flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
@@ -220,6 +240,20 @@ function AppShell() {
         />
       )}
       {toastNode}
+
+      {/* PDF Export */}
+      {showExportModal && (
+        <ExportModal
+          onClose={() => setShowExportModal(false)}
+          onExport={(year, months) => {
+            setShowExportModal(false)
+            setExportConfig({ year, months })
+          }}
+        />
+      )}
+      {exportConfig && (
+        <PrintLayout year={exportConfig.year} months={exportConfig.months} />
+      )}
     </div>
     </UndoContext.Provider>
   )
