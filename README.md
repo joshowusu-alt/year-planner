@@ -8,8 +8,11 @@ STRATUM is a planning app for yearly strategy, monthly themes, weekly execution,
 - Goals, milestones, tasks, and notes
 - Strategy workspace with Vital Few and weekly review flows
 - Natural-language quick add for events
+- One-time ICS calendar import
+- Spreadsheet import for CSV/XLSX schedules
 - Local-first storage with optional Supabase sync
 - Read-only share links
+- CSV export, print/PDF export, and a central import/export/share hub
 - In-app reminders plus optional background push reminders
 - PWA support for installable/mobile use
 
@@ -89,6 +92,13 @@ Run them in the Supabase SQL editor if you want push reminders and share links.
 - In-app reminders work while STRATUM is open in the browser.
 - Background push requires Supabase, a configured VAPID keypair, and a cron job that calls `/api/send-reminders`.
 - Share links are read-only and expire after 90 days.
+
+## Import and export workflows
+
+- **Calendar import:** upload an `.ics` export from Google Calendar, Apple Calendar, or Outlook.
+- **Spreadsheet import:** upload `.csv`, `.xlsx`, or `.xls` files using the STRATUM template headers (`Date`, `Title`, `Category`, `Start Time`, `End Time`, `Notes`, `Recurrence`, `Reminder`).
+- **Word/PDF capture:** move a document-based schedule into STRATUM by copying it into the template or saving it as CSV/Excel first, then reviewing the import preview.
+- **Export/share:** export planner data to CSV, print to PDF, or create a read-only share link from Settings.
 
 ## Validation commands
 

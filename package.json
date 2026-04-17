@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node --test src/lib/naturalLanguage.test.ts",
+    "test": "node --test src/lib/naturalLanguage.test.ts src/lib/calendarImport.test.ts src/lib/tableImport.test.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -20,6 +20,7 @@
     "@tanstack/react-query": "^5.90.21",
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
+    "ical.js": "^2.2.1",
     "jspdf": "^4.2.0",
     "lucide-react": "^0.577.0",
     "react": "^19.2.0",
@@ -28,7 +29,8 @@
     "web-push": "^3.6.7",
     "workbox-precaching": "^7.4.0",
     "workbox-routing": "^7.4.0",
-    "workbox-strategies": "^7.4.0"
+    "workbox-strategies": "^7.4.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
