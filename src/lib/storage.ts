@@ -99,6 +99,25 @@ export function createEvent(
   }
 }
 
+export function bulkCreateEvents(
+  store: PlannerStore,
+  events: Array<Omit<PlannerStore['events'][0], 'id' | 'createdAt' | 'updatedAt'>>
+): PlannerStore {
+  const now = new Date().toISOString()
+  return {
+    ...store,
+    events: [
+      ...store.events,
+      ...events.map((event) => ({
+        ...event,
+        id: crypto.randomUUID(),
+        createdAt: now,
+        updatedAt: now,
+      })),
+    ],
+  }
+}
+
 export function updateEvent(
   store: PlannerStore,
   id: string,
@@ -395,20 +414,27 @@ export function updateWeeklyReview(store: PlannerStore, id: string, patch: Parti
 // ─── Export helpers ───────────────────────────────────────────────────────────
 
 export function exportToCSV(store: PlannerStore): void {
+  const categoryLabels = new Map(store.categories.map((category) => [category.id, category.label]))
   const rows = [
-    ['Date', 'Day', 'Title', 'Category', 'Notes'],
+    ['Date', 'Day', 'Title', 'Category', 'Start Time', 'End Time', 'Recurrence', 'Reminder', 'Notes'],
     ...store.events.map((e) => {
       const d = new Date(e.date)
       return [
         e.date,
         d.toLocaleDateString('en-US', { weekday: 'long' }),
         e.title,
-        e.category,
+        categoryLabels.get(e.category) ?? e.category,
+        e.startTime ?? '',
+        e.endTime ?? '',
+        e.recurrence?.type && e.recurrence.type !== 'none' ? e.recurrence.type : '',
+        e.reminder != null ? String(e.reminder) : '',
         e.notes ?? '',
       ]
     }),
   ]
-  const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n')
+  const csv = rows
+    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
   const blob = new Blob([csv], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
