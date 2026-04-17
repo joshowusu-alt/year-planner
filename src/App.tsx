@@ -21,6 +21,7 @@ import { OnboardingModal } from './components/OnboardingModal'
 import { EventModal } from './components/planner/EventModal'
 import { StrategyPage } from './pages/StrategyPage'
 import { SearchPage } from './pages/SearchPage'
+import { DashboardPage } from './pages/DashboardPage'
 import { SharedPlannerView } from './components/SharedPlannerView'
 import { useBreakpoint } from './hooks/useMediaQuery'
 import { useReminders } from './hooks/useReminders'
@@ -32,7 +33,15 @@ function AppShell() {
   const { addEvent } = usePlanner()
   useReminders()
   const { pushUndo, toastNode } = useUndoToast()
-  const [page, setPage] = useState<Page>('planner')
+
+  // Hash-based routing: read initial page from hash, sync hash on page change
+  const getPageFromHash = (): Page => {
+    const hash = window.location.hash.slice(1) as Page
+    const validPages: Page[] = ['planner','monthly','weekly','goals','tasks','notes','settings','strategy','search','dashboard']
+    return validPages.includes(hash) ? hash : 'planner'
+  }
+
+  const [page, setPage] = useState<Page>(getPageFromHash)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileAddEvent, setMobileAddEvent] = useState(false)
@@ -67,7 +76,26 @@ function AppShell() {
 
   useEffect(() => {
     pageRef.current = page
+    // Keep URL hash in sync so users can share/bookmark pages and use browser back
+    const newHash = page === 'planner' ? '' : `#${page}`
+    if (window.location.hash !== newHash) {
+      // Use replaceState to avoid polluting history stack on every tab switch;
+      // only pushState when navigating away from planner (intentional navigation).
+      if (page === 'planner') {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      } else {
+        window.history.pushState(null, '', window.location.pathname + window.location.search + `#${page}`)
+      }
+    }
   }, [page])
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const handlePopState = () => setPage(getPageFromHash())
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Close drawer when switching to desktop
   useEffect(() => {
@@ -149,15 +177,16 @@ function AppShell() {
 
         {/* Main content — bottom padding on mobile for bottom nav + safe area */}
         <div className={isMobile ? 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-20' : 'flex-1 min-h-0'}>
-          {page === 'planner'  && <PlannerPage />}
-          {page === 'monthly'  && <MonthlyCalendar />}
-          {page === 'weekly'   && <WeeklyView />}
-          {page === 'goals'    && <GoalsPage />}
-          {page === 'tasks'    && <TasksPage />}
-          {page === 'notes'    && <NotesPage />}
-          {page === 'strategy' && <StrategyPage />}
-          {page === 'search'   && <SearchPage onNavigate={setPage} />}
-          {page === 'settings' && <SettingsPage />}
+          {page === 'planner'   && <PlannerPage />}
+          {page === 'monthly'   && <MonthlyCalendar />}
+          {page === 'weekly'    && <WeeklyView />}
+          {page === 'goals'     && <GoalsPage onNavigate={setPage} />}
+          {page === 'tasks'     && <TasksPage />}
+          {page === 'notes'     && <NotesPage />}
+          {page === 'strategy'  && <StrategyPage />}
+          {page === 'search'    && <SearchPage onNavigate={setPage} />}
+          {page === 'settings'  && <SettingsPage />}
+          {page === 'dashboard' && <DashboardPage />}
         </div>
       </div>
 
