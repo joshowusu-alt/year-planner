@@ -21,7 +21,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-// ─── Guest user for localStorage-only mode ──────────────────────────────────────────────
+// ─── Guest user for localStorage-only mode ────────────────────────────────────
 
 const GUEST_USER: UserProfile = {
   id: 'local-guest',

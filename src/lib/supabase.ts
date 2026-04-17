@@ -17,7 +17,7 @@ export const supabase =
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
-// ─── Storage helpers ───────────────────────────────────────────────────────────────────
+// ─── Storage helpers ──────────────────────────────────────────────────────────
 
 const LOGO_BUCKET = 'logos'
 
