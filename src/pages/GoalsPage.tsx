@@ -3,9 +3,10 @@ import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Cir
 import { usePlanner } from '../context/PlannerContext'
 import { useAuth } from '../context/AuthContext'
 import type { Goal, Milestone, PriorityLevel, GoalStatus } from '../types'
+import type { Page } from '../components/layout/Sidebar'
 import { PRIORITY_COLORS, PRIORITY_LABELS, GOAL_STATUS_LABELS } from '../types'
 
-// ─── Progress bar ─────────────────────────────────────────────────────────────
+// ─── Progress bar ─────────────────────────────────────────────────────────────────
 
 function ProgressBar({ value, color }: { value: number; color?: string }) {
   return (
@@ -18,7 +19,7 @@ function ProgressBar({ value, color }: { value: number; color?: string }) {
   )
 }
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+// ─── Status badge ───────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<GoalStatus, { bg: string; text: string }> = {
   'not-started': { bg: '#1e2d40', text: '#94a3b8' },
@@ -39,7 +40,7 @@ function StatusBadge({ status }: { status: GoalStatus }) {
   )
 }
 
-// ─── Goal modal form ──────────────────────────────────────────────────────────
+// ─── Goal modal form ───────────────────────────────────────────────────────────────
 
 interface GoalFormData {
   title: string
@@ -198,7 +199,7 @@ function GoalModal({
   )
 }
 
-// ─── Milestone row ────────────────────────────────────────────────────────────
+// ─── Milestone row ────────────────────────────────────────────────────────────────
 
 function MilestoneRow({
   milestone,
@@ -232,9 +233,9 @@ function MilestoneRow({
   )
 }
 
-// ─── Goal card ────────────────────────────────────────────────────────────────
+// ─── Goal card ────────────────────────────────────────────────────────────────────
 
-function GoalCard({ goal }: { goal: Goal }) {
+function GoalCard({ goal, onNavigate }: { goal: Goal; onNavigate: (p: Page) => void }) {
   const { editGoal, removeGoal, addMilestoneToGoal, editMilestone, removeMilestone, store, toggleTask } = usePlanner()
   const { user } = useAuth()
   const canEdit = !goal.userId || goal.userId === user?.id
@@ -315,12 +316,16 @@ function GoalCard({ goal }: { goal: Goal }) {
             <ProgressBar value={effectiveProgress} />
           </div>
           {linkedTasks.length > 0 && (
-            <div className="mt-1.5 flex items-center gap-1.5">
+            <button
+              className="mt-1.5 flex items-center gap-1.5 rounded-lg px-1 py-1 -mx-1 active:bg-white/10 transition-colors"
+              onClick={() => onNavigate('tasks')}
+              title="View linked tasks"
+            >
               <Square size={10} className="text-blue-400" />
               <span className="text-xs" style={{ color: '#60a5fa' }}>
-                {completedLinkedTasks}/{linkedTasks.length} linked task{linkedTasks.length !== 1 ? 's' : ''}
+                {completedLinkedTasks}/{linkedTasks.length} linked task{linkedTasks.length !== 1 ? 's' : ''} →
               </span>
-            </div>
+            </button>
           )}
 
           {/* Expanded milestones */}
@@ -400,7 +405,7 @@ function GoalCard({ goal }: { goal: Goal }) {
   )
 }
 
-// ─── Pareto 80/20 Insight ─────────────────────────────────────────────────────
+// ─── Pareto 80/20 Insight ───────────────────────────────────────────────────────────────
 
 function ParetoInsight({ goals }: { goals: Goal[] }) {
   const [open, setOpen] = useState(true)
@@ -506,9 +511,9 @@ function ParetoInsight({ goals }: { goals: Goal[] }) {
   )
 }
 
-// ─── Goals page ───────────────────────────────────────────────────────────────
+// ─── Goals page ─────────────────────────────────────────────────────────────────────
 
-export function GoalsPage() {
+export function GoalsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const { store, addGoal, currentYear } = usePlanner()
   const [showModal, setShowModal] = useState(false)
   const [filterQ, setFilterQ] = useState<number | 'all'>('all')
@@ -528,7 +533,7 @@ export function GoalsPage() {
       <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 flex-wrap">
         <div>
           <h2 className="text-xl font-black tracking-widest uppercase" style={{ color: '#d4af37' }}>
-            Goals & Milestones
+            Goals &amp; Milestones
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">{currentYear} · {store.goals.filter(g=>g.year===currentYear).length} goals</p>
         </div>
@@ -592,7 +597,7 @@ export function GoalsPage() {
               <p className="text-xs text-slate-600 pl-6">No goals for Q{q}</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {qGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
+                {qGoals.map((goal) => <GoalCard key={goal.id} goal={goal} onNavigate={onNavigate} />)}
               </div>
             )}
           </div>
@@ -602,7 +607,7 @@ export function GoalsPage() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Target size={48} className="text-slate-700 mb-3" />
             <p className="text-slate-500 font-semibold">No goals yet</p>
-            <p className="text-xs text-slate-600 mt-1">Click "New Goal" to get started</p>
+            <p className="text-xs text-slate-600 mt-1">Click &quot;New Goal&quot; to get started</p>
           </div>
         )}
       </div>
