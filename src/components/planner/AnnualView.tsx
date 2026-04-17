@@ -33,7 +33,7 @@ export function AnnualView() {
   const monthRefs = useRef<(HTMLDivElement | null)[]>(Array(12).fill(null))
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // ── Auto-scroll to current month on mount ─────────────────────────────────
+  // ── Auto-scroll to current month on mount ───────────────────────────────────────
   useEffect(() => {
     const targetIdx = currentYear === todayYear ? todayMonth - 1 : 0
     const el = monthRefs.current[targetIdx]
@@ -61,7 +61,7 @@ export function AnnualView() {
     return () => observer.disconnect()
   }, [currentYear, todayYear, todayMonth])
 
-  // ── Event handlers ────────────────────────────────────────────────────────
+  // ── Event handlers ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback((data: {
     date: string
     title: string
@@ -78,27 +78,22 @@ export function AnnualView() {
     }
   }, [editingEvent, editEvent, addEvent])
 
-  function openAdd(date: string) {
+  const openAdd = useCallback((date: string) => {
     setEditingEvent(null)
     setModalDate(date)
-  }
+  }, [])
 
-  function openEdit(event: PlannerEvent) {
-    setEditingEvent(event)
-    setModalDate(null)
-  }
+  const openEdit = useCallback((ev: PlannerEvent) => {
+    setEditingEvent(ev)
+    setModalDate(ev.date)
+  }, [])
 
-  function closeModal() {
-    setEditingEvent(null)
-    setModalDate(null)
-  }
-
-  function goToToday() {
+  const goToToday = useCallback(() => {
     const el = monthRefs.current[todayMonth - 1]
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  }, [todayMonth])
 
-  // ── Print layout: also render a hidden quarterly print version ────────────
+  // ── Print layout: also render a hidden quarterly print version ──────────────────────────────
   const printOrgName = store.organizationName
   const printTitle = store.plannerTitle
 
@@ -108,7 +103,7 @@ export function AnnualView() {
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto"
-        style={{ scrollSnapType: 'y mandatory', overscrollBehaviorY: 'contain' }}
+        style={{ scrollSnapType: 'y proximity', overscrollBehaviorY: 'contain' }}
       >
         {/* Print header — hidden on screen, shown when printing */}
         <div
@@ -170,13 +165,22 @@ export function AnnualView() {
       )}
 
       {/* Event modal */}
-      {(modalDate !== null || editingEvent !== null) && (
+      {modalDate && (
         <EventModal
-          event={editingEvent}
-          defaultDate={modalDate ?? undefined}
-          onSave={handleSave}
-          onDelete={removeEvent}
-          onClose={closeModal}
+          initialDate={modalDate}
+          event={editingEvent ?? undefined}
+          onSave={(data) => {
+            handleSave(data)
+            if (editingEvent && data.deleteId) {
+              removeEvent(data.deleteId)
+            }
+            setModalDate(null)
+            setEditingEvent(null)
+          }}
+          onClose={() => {
+            setModalDate(null)
+            setEditingEvent(null)
+          }}
         />
       )}
     </div>
