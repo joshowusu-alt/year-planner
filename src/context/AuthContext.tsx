@@ -40,25 +40,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // onAuthStateChange fires automatically when:
-    //   - a new session starts (including after OAuth redirect with #access_token in hash)
-    //   - an existing session is restored from storage
-    //   - the user signs out
-    // detectSessionInUrl: true (set on the client) handles the hash token automatically.
+    // onAuthStateChange handles all session events:
+    //   INITIAL_SESSION — fired once on load (with session from storage or URL token)
+    //   SIGNED_IN       — after OAuth redirect is processed
+    //   SIGNED_OUT      — after sign-out
+    // detectSessionInUrl: true (set on the client) reads #access_token= from the URL.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSupabaseUser(session?.user ?? null)
       setLoading(false)
     })
 
-    // Fallback: if there is no hash token on this load, resolve the existing session
-    // immediately so loading isn't stuck. onAuthStateChange will also fire for existing
-    // sessions, but getSession() ensures we don't wait unnecessarily.
-    if (!window.location.hash.includes('access_token')) {
-      supabase.auth.getSession().then(({ data }) => {
-        setSupabaseUser(data.session?.user ?? null)
-        setLoading(false)
-      })
-    }
+    // Always call getSession() as a reliable fallback. onAuthStateChange fires
+    // INITIAL_SESSION too, but getSession() ensures loading is cleared even if the
+    // event fires before the subscription was set up.
+    supabase.auth.getSession().then(({ data }) => {
+      // Only apply if onAuthStateChange hasn't already resolved the session
+      setSupabaseUser(prev => prev ?? (data.session?.user ?? null))
+      setLoading(false)
+    })
 
     return () => subscription.unsubscribe()
   }, [])
