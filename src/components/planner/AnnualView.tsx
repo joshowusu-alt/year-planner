@@ -33,7 +33,7 @@ export function AnnualView() {
   const monthRefs = useRef<(HTMLDivElement | null)[]>(Array(12).fill(null))
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // ── Auto-scroll to current month on mount ───────────────────────────────────────
+  // ── Auto-scroll to current month on mount ─────────────────────────────────
   useEffect(() => {
     const targetIdx = currentYear === todayYear ? todayMonth - 1 : 0
     const el = monthRefs.current[targetIdx]
@@ -61,7 +61,7 @@ export function AnnualView() {
     return () => observer.disconnect()
   }, [currentYear, todayYear, todayMonth])
 
-  // ── Event handlers ──────────────────────────────────────────────────────────────────
+  // ── Event handlers ────────────────────────────────────────────────────
   const handleSave = useCallback((data: {
     date: string
     title: string
@@ -70,30 +70,36 @@ export function AnnualView() {
     recurrence?: RecurrenceRule
     startTime?: string
     endTime?: string
+    reminder?: number | null
   }) => {
     if (editingEvent) {
       editEvent(editingEvent.id, data)
     } else {
-      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime)
+      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime, data.reminder)
     }
   }, [editingEvent, editEvent, addEvent])
 
-  const openAdd = useCallback((date: string) => {
+  function openAdd(date: string) {
     setEditingEvent(null)
     setModalDate(date)
-  }, [])
+  }
 
-  const openEdit = useCallback((ev: PlannerEvent) => {
-    setEditingEvent(ev)
-    setModalDate(ev.date)
-  }, [])
+  function openEdit(event: PlannerEvent) {
+    setEditingEvent(event)
+    setModalDate(null)
+  }
 
-  const goToToday = useCallback(() => {
+  function closeModal() {
+    setEditingEvent(null)
+    setModalDate(null)
+  }
+
+  function goToToday() {
     const el = monthRefs.current[todayMonth - 1]
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [todayMonth])
+  }
 
-  // ── Print layout: also render a hidden quarterly print version ──────────────────────────────
+  // ── Print layout: also render a hidden quarterly print version ────────────────
   const printOrgName = store.organizationName
   const printTitle = store.plannerTitle
 
@@ -165,22 +171,13 @@ export function AnnualView() {
       )}
 
       {/* Event modal */}
-      {modalDate && (
+      {(modalDate !== null || editingEvent !== null) && (
         <EventModal
-          initialDate={modalDate}
-          event={editingEvent ?? undefined}
-          onSave={(data) => {
-            handleSave(data)
-            if (editingEvent && data.deleteId) {
-              removeEvent(data.deleteId)
-            }
-            setModalDate(null)
-            setEditingEvent(null)
-          }}
-          onClose={() => {
-            setModalDate(null)
-            setEditingEvent(null)
-          }}
+          event={editingEvent}
+          defaultDate={modalDate ?? undefined}
+          onSave={handleSave}
+          onDelete={removeEvent}
+          onClose={closeModal}
         />
       )}
     </div>
