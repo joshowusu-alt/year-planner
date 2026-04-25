@@ -108,7 +108,7 @@ export function AnnualView() {
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto"
-        style={{ scrollSnapType: 'y mandatory', overscrollBehaviorY: 'contain' }}
+        style={{ scrollSnapType: 'y proximity', overscrollBehaviorY: 'contain' }}
       >
         {/* Print header — hidden on screen, shown when printing */}
         <div
