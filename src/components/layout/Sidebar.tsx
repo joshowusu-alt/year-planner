@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers, Search, BarChart2 } from 'lucide-react'
+import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers, Search, BarChart2, FileDown } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import { useAuth } from '../../context/AuthContext'
 
@@ -7,9 +7,10 @@ export type Page = 'planner' | 'monthly' | 'weekly' | 'goals' | 'tasks' | 'notes
 interface Props {
   page: Page
   onNavigate: (p: Page) => void
+  onExportRequest?: () => void
 }
 
-export function Sidebar({ page, onNavigate }: Props) {
+export function Sidebar({ page, onNavigate, onExportRequest }: Props) {
   const { store, isSyncing } = usePlanner()
   const { user, signOut, isConfigured } = useAuth()
 
@@ -88,6 +89,17 @@ export function Sidebar({ page, onNavigate }: Props) {
 
       {/* Bottom: settings + user */}
       <div className="px-3 pb-4 space-y-1" style={{ borderTop: '1px solid #1e2d40', paddingTop: '0.75rem' }}>
+        {onExportRequest && (
+          <button
+            onClick={onExportRequest}
+            className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
+            style={{ color: '#94a3b8' }}
+            title="Export as PDF"
+          >
+            <FileDown size={16} />
+            Export PDF
+          </button>
+        )}
         {bottomItems.map(({ id, label, icon: Icon }) => (
           <button
             key={id}

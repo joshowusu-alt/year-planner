@@ -88,8 +88,53 @@ html {
 /* Print / PDF styles */
 @media print {
   .no-print { display: none !important; }
-  body { background: white; color: black; }
   .print-table { page-break-inside: avoid; }
+
+  /* ── STRATUM Export mode ──────────────────────────────────────────
+     When body.stratum-export-mode is set (by PrintLayout component),
+     hide the app shell and show the print layout.
+     Without the class, normal app prints work as before.
+  ─────────────────────────────────────────────────────────────────── */
+  body.stratum-export-mode #app-shell {
+    display: none !important;
+  }
+  body.stratum-export-mode #stratum-print-layout {
+    display: block !important;
+  }
+
+  /* ── Normal Ctrl+P print (not export mode) ────────────────────────
+     Force white backgrounds so the dark app UI doesn't print black.
+  ─────────────────────────────────────────────────────────────────── */
+  body:not(.stratum-export-mode) {
+    background: white !important;
+    color: #111 !important;
+  }
+  body:not(.stratum-export-mode) #app-shell {
+    background: white !important;
+  }
+  body:not(.stratum-export-mode) aside,
+  body:not(.stratum-export-mode) nav {
+    display: none !important;
+  }
+  body:not(.stratum-export-mode) [style*="background: #0a0e1a"],
+  body:not(.stratum-export-mode) [style*="background:#0a0e1a"],
+  body:not(.stratum-export-mode) [style*="background: #0d1224"],
+  body:not(.stratum-export-mode) [style*="background:#0d1224"] {
+    background: white !important;
+    color: #111 !important;
+  }
+
+  /* Preserve background colours and gradients when printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 14mm;
+  }
 }
 
 /* Safe area for devices with home bar / notch */

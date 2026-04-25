@@ -1,4 +1,4 @@
-import { X, FileText, Settings, LogOut, CheckSquare, Layers, BarChart2, Search } from 'lucide-react'
+import { X, FileText, Settings, LogOut, CheckSquare, Layers, BarChart2, Search, FileDown } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { usePlanner } from '../../context/PlannerContext'
 import type { Page } from './Sidebar'
@@ -8,6 +8,7 @@ interface Props {
   onClose: () => void
   page: Page
   onNavigate: (p: Page) => void
+  onExportRequest?: () => void
 }
 
 const drawerItems: { id: Page; label: string; icon: React.ElementType }[] = [
@@ -19,7 +20,7 @@ const drawerItems: { id: Page; label: string; icon: React.ElementType }[] = [
   { id: 'settings',  label: 'Settings',  icon: Settings },
 ]
 
-export function MobileDrawer({ open, onClose, page, onNavigate }: Props) {
+export function MobileDrawer({ open, onClose, page, onNavigate, onExportRequest }: Props) {
   const { user, signOut, isConfigured } = useAuth()
   const { store, isSyncing } = usePlanner()
 
@@ -85,6 +86,20 @@ export function MobileDrawer({ open, onClose, page, onNavigate }: Props) {
             )
           })}
         </nav>
+
+        {/* Export PDF */}
+        {onExportRequest && (
+          <div className="px-4 pb-3">
+            <button
+              onClick={() => { onExportRequest(); onClose() }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all active:bg-white/10"
+              style={{ color: '#d4af37', border: '1px solid rgba(212,175,55,0.2)', background: 'rgba(212,175,55,0.05)' }}
+            >
+              <FileDown size={18} />
+              Export PDF
+            </button>
+          </div>
+        )}
 
         {/* User section */}
         {user && user.id !== 'local-guest' && (
