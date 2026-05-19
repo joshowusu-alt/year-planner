@@ -40,10 +40,8 @@ CREATE POLICY "Owners manage their own shares"
   USING  (auth.uid() = owner_user_id)
   WITH CHECK (auth.uid() = owner_user_id);
 
-CREATE POLICY "Public can read share tokens"
-  ON public.planner_shares
-  FOR SELECT
-  USING (true);
+-- NOTE: Public token resolution is handled server-side by /api/shared-planner
+-- which uses the service_role key. No direct public client access is needed.
 
 -- ── 3. Push subscriptions table ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.push_subscriptions (
@@ -60,7 +58,19 @@ CREATE INDEX IF NOT EXISTS push_subscriptions_user_id_idx
 
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Service role has full access"
+-- Server-side API functions use the service role key and bypass RLS automatically.
+-- This explicit policy restricts direct DB access via any other role.
+CREATE POLICY "Service role full access"
   ON public.push_subscriptions
+  TO service_role
   USING (true)
   WITH CHECK (true);
+
+-- Authenticated users can only read/delete their own subscription rows.
+-- (The frontend never queries this table directly, but this policy is a safe guard.)
+CREATE POLICY "Users manage own subscriptions"
+  ON public.push_subscriptions
+  FOR ALL
+  TO authenticated
+  USING  (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);

@@ -1,6 +1,7 @@
+import { supabase } from './supabase'
+
 /** Converts a base64url VAPID public key to a Uint8Array for PushManager */
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-  // trim any accidental whitespace or quotes that may have been set in env
   const clean = base64String.trim().replace(/^"|"$/g, '')
   const padding = '='.repeat((4 - (clean.length % 4)) % 4)
   const base64 = (clean + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -45,9 +46,16 @@ export async function getPushStatus(): Promise<PushStatus> {
   }
 }
 
-export async function subscribeToPush(userId?: string): Promise<{ ok: boolean; error?: string }> {
+async function getAccessToken(): Promise<string | null> {
+  if (!supabase) return null
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.access_token ?? null
+}
+
+export async function subscribeToPush(): Promise<{ ok: boolean; error?: string }> {
   try {
-    if (!userId || userId === 'local-guest') {
+    const accessToken = await getAccessToken()
+    if (!accessToken) {
       return { ok: false, error: 'SUPABASE_REQUIRED' }
     }
     const vapidKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined)?.trim()
@@ -63,15 +71,17 @@ export async function subscribeToPush(userId?: string): Promise<{ ok: boolean; e
     })
     const res = await fetch('/api/subscribe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription: subscription.toJSON(), userId }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ subscription: subscription.toJSON() }),
     })
     if (!res.ok) return { ok: false, error: `Server error ${res.status}` }
     return { ok: true }
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
     console.error('Push subscribe failed:', msg)
-    // NotAllowedError = permission denied by user or iOS non-PWA
     if (msg.includes('NotAllowedError') || msg.includes('not allowed')) {
       return { ok: false, error: 'PERMISSION_DENIED' }
     }
@@ -87,9 +97,13 @@ export async function unsubscribeFromPush(): Promise<boolean> {
     const reg = await navigator.serviceWorker.ready
     const sub = await reg.pushManager.getSubscription()
     if (!sub) return true
+    const accessToken = await getAccessToken()
     await fetch('/api/unsubscribe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+      },
       body: JSON.stringify({ endpoint: sub.endpoint }),
     })
     return sub.unsubscribe()

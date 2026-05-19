@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
-import { parseISO, format, getDay, getDate, getMonth } from 'date-fns'
+import { format } from 'date-fns'
 
 interface PlannerEvent {
   id: string
@@ -9,27 +9,55 @@ interface PlannerEvent {
   date: string
   startTime?: string
   reminder?: number | null
-  recurrence?: { type: string }
+  recurrence?: { type: string; until?: string }
+  deletedDates?: string[]
 }
 
 function isEventActiveToday(ev: PlannerEvent, todayStr: string): boolean {
-  if (ev.date === todayStr) return true
-  if (!ev.recurrence || ev.recurrence.type === 'none') return false
-  const base = parseISO(ev.date)
-  const today = parseISO(todayStr)
-  if (today < base) return false
+  if (ev.deletedDates?.includes(todayStr)) return false
+
+  if (!ev.recurrence || ev.recurrence.type === 'none') return ev.date === todayStr
+  if (todayStr < ev.date) return false
+  if (ev.recurrence.until && todayStr > ev.recurrence.until) return false
+
+  const msPerDay = 86_400_000
+  const base   = new Date(ev.date   + 'T00:00:00').getTime()
+  const target = new Date(todayStr  + 'T00:00:00').getTime()
+  const diffDays = Math.round((target - base) / msPerDay)
+
   switch (ev.recurrence.type) {
-    case 'daily': return true
-    case 'weekly': return getDay(today) === getDay(base)
-    case 'monthly': return getDate(today) === getDate(base)
-    case 'yearly': return getDate(today) === getDate(base) && getMonth(today) === getMonth(base)
+    case 'daily':    return true
+    case 'weekly':   return diffDays % 7  === 0
+    case 'biweekly': return diffDays % 14 === 0
+    case 'monthly': {
+      const b = new Date(ev.date   + 'T00:00:00')
+      const t = new Date(todayStr  + 'T00:00:00')
+      return t.getDate() === b.getDate()
+    }
+    case 'annually':
+    case 'yearly': {
+      const b = new Date(ev.date   + 'T00:00:00')
+      const t = new Date(todayStr  + 'T00:00:00')
+      return t.getDate() === b.getDate() && t.getMonth() === b.getMonth()
+    }
     default: return false
   }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).end()
+
+  const secret = process.env.CRON_SECRET
+  if (secret) {
+    const authHeader = req.headers['authorization']
+    const querySecret = req.query['secret']
+    const provided = authHeader?.toString().replace(/^Bearer\s+/i, '') ?? querySecret
+    if (provided !== secret) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+  }
+
   try {
-    // Validate env vars first — gives a useful 500 message instead of silent crash
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const vapidPublic = process.env.VAPID_PUBLIC_KEY
@@ -40,82 +68,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     webpush.setVapidDetails(
       'mailto:admin@stratum.app',
-      // strip any accidental padding/whitespace — web-push requires bare base64url
       vapidPublic.trim().replace(/=+$/, ''),
       vapidPrivate.trim().replace(/=+$/, '')
     )
 
-  // Allow GET (for cron) and POST (for manual trigger)
-  const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-  const now = Date.now()
-  const todayStr = format(new Date(), 'yyyy-MM-dd')
+    const now = Date.now()
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
 
-  // Get all planner data rows
-  const { data: plannerRows, error: plannerErr } = await supabase
-    .from('planner_data')
+    const { data: plannerRows, error: plannerErr } = await supabase
+      .from('planner_data')
       .select('user_id, store')
-  // Get all push subscriptions
-  const { data: subscriptions, error: subErr } = await supabase
-    .from('push_subscriptions')
-    .select('*')
+    const { data: subscriptions, error: subErr } = await supabase
+      .from('push_subscriptions')
+      .select('*')
 
-  if (plannerErr) return res.status(500).json({ error: plannerErr.message })
-  if (subErr) return res.status(500).json({ error: subErr.message })
+    if (plannerErr) return res.status(500).json({ error: plannerErr.message })
+    if (subErr) return res.status(500).json({ error: subErr.message })
 
-  let sent = 0
-  let errors = 0
+    let sent = 0
+    let errors = 0
 
-  for (const row of (plannerRows ?? [])) {
-    const events: PlannerEvent[] = row.store?.events ?? []
-    const userId: string = row.user_id
+    for (const row of (plannerRows ?? [])) {
+      const events: PlannerEvent[] = row.store?.events ?? []
+      const userId: string = row.user_id
+      const userSubs = subscriptions?.filter((s) => s.user_id === userId) ?? []
 
-    // Never reuse an unscoped subscription across multiple users.
-    const userSubs = subscriptions?.filter((s) => s.user_id === userId) ?? []
+      if (userSubs.length === 0) continue
 
-    if (userSubs.length === 0) continue
+      for (const ev of events) {
+        if (!ev.startTime || ev.reminder == null || ev.reminder < 0) continue
+        if (!isEventActiveToday(ev, todayStr)) continue
 
-    for (const ev of events) {
-      if (!ev.startTime || ev.reminder == null || ev.reminder < 0) continue
-      if (!isEventActiveToday(ev, todayStr)) continue
+        const eventDateTime = new Date(`${todayStr}T${ev.startTime}`)
+        if (isNaN(eventDateTime.getTime())) continue
 
-      const eventDateTime = new Date(`${todayStr}T${ev.startTime}`)
-      if (isNaN(eventDateTime.getTime())) continue
+        const fireAt = eventDateTime.getTime() - ev.reminder * 60_000
+        if (Math.abs(fireAt - now) > 90_000) continue
 
-      const fireAt = eventDateTime.getTime() - ev.reminder * 60_000
-      // Fire if within a ±90 second window around the cron tick to handle timing drift
-      if (Math.abs(fireAt - now) > 90_000) continue
+        const body = ev.reminder === 0
+          ? 'Starting now'
+          : ev.reminder < 60
+            ? `In ${ev.reminder} minutes`
+            : ev.reminder === 60 ? 'In 1 hour'
+              : `In ${ev.reminder / 60} hours`
 
-      const body = ev.reminder === 0
-        ? 'Starting now'
-        : ev.reminder < 60
-          ? `In ${ev.reminder} minutes`
-          : ev.reminder === 60 ? 'In 1 hour'
-            : `In ${ev.reminder / 60} hours`
+        const payload = JSON.stringify({
+          title: ev.title,
+          body,
+          icon: '/icon.svg',
+          tag: `reminder-${ev.id}-${todayStr}`,
+        })
 
-      const payload = JSON.stringify({
-        title: ev.title,
-        body,
-        icon: '/icon.svg',
-        tag: `reminder-${ev.id}-${todayStr}`,
-      })
-
-      for (const sub of userSubs) {
-        try {
-          await webpush.sendNotification(sub.subscription as webpush.PushSubscription, payload)
-          sent++
-        } catch (e: unknown) {
-          // 410 Gone = subscription expired, remove it
-          if ((e as { statusCode?: number }).statusCode === 410) {
-            await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+        for (const sub of userSubs) {
+          try {
+            await webpush.sendNotification(sub.subscription as webpush.PushSubscription, payload)
+            sent++
+          } catch (e: unknown) {
+            if ((e as { statusCode?: number }).statusCode === 410) {
+              await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+            }
+            errors++
           }
-          errors++
         }
       }
     }
-  }
 
-  return res.status(200).json({ sent, errors, checked: plannerRows?.length ?? 0 })
+    return res.status(200).json({ sent, errors, checked: plannerRows?.length ?? 0 })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
     console.error('send-reminders crash:', msg)

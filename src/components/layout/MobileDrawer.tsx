@@ -59,6 +59,7 @@ export function MobileDrawer({ open, onClose, page, onNavigate, onExportRequest 
           </div>
           <button
             onClick={onClose}
+            aria-label="Close navigation menu"
             className="w-10 h-10 flex items-center justify-center rounded-xl active:bg-white/10"
           >
             <X size={18} className="text-slate-400" />
@@ -138,3 +139,4 @@ export function MobileDrawer({ open, onClose, page, onNavigate, onExportRequest 
     </>
   )
 }
+

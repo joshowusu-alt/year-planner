@@ -8,8 +8,8 @@ export const supabase =
   supabaseUrl && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
-          flowType: 'implicit',      // tokens returned in URL hash — no PKCE code exchange needed
-          detectSessionInUrl: true,  // auto-reads #access_token= on page load
+          flowType: 'pkce',          // PKCE is more secure; code exchange happens server-side
+          detectSessionInUrl: true,  // auto-processes ?code= on OAuth callback
           persistSession: true,
         },
       })

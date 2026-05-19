@@ -100,43 +100,21 @@ export async function getShareTokens(userId: string): Promise<ShareRecord[]> {
 
 /**
  * Fetches the planner data for the owner of the given share token.
- * Returns null if token doesn't exist or is invalid.
+ * Calls the /api/shared-planner serverless function (service-role) instead
+ * of querying planner_data directly — the anon client would be blocked by RLS.
+ * Returns null if token doesn't exist, is expired, or the request fails.
  */
 export async function fetchSharedPlannerData(
   token: string,
 ): Promise<PlannerStore | null> {
-  if (!supabase) return null
   try {
-    // 1. Resolve token → owner_user_id
-    const { data: shareRow, error: shareErr } = await supabase
-      .from('planner_shares')
-      .select('owner_user_id, created_at, label')
-      .eq('token', token)
-      .single()
-    if (shareErr || !shareRow) {
-      console.error('fetchSharedPlannerData – token lookup failed:', shareErr?.message)
+    const res = await fetch(`/api/shared-planner?token=${encodeURIComponent(token)}`)
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: 'Network error' }))
+      console.error('fetchSharedPlannerData – API error:', res.status, body.error)
       return null
     }
-
-    if (shareRow.created_at < getShareExpiryCutoff()) {
-      console.error('fetchSharedPlannerData – token expired')
-      return null
-    }
-
-    const ownerId = shareRow.owner_user_id as string
-
-    // 2. Fetch planner data for that owner
-    const { data: planRow, error: planErr } = await supabase
-      .from('planner_data')
-      .select('store')
-      .eq('user_id', ownerId)
-      .single()
-    if (planErr || !planRow?.store) {
-      console.error('fetchSharedPlannerData – planner data not found:', planErr?.message)
-      return null
-    }
-
-    return planRow.store as PlannerStore
+    return await res.json() as PlannerStore
   } catch (err) {
     console.error('fetchSharedPlannerData exception:', err)
     return null
@@ -158,3 +136,4 @@ export async function checkSharesTableExists(): Promise<'exists' | 'missing' | '
     return 'unknown'
   }
 }
+

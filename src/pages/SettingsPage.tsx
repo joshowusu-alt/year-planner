@@ -20,7 +20,7 @@ import { requestPlannerPrintExport } from '../lib/plannerNavigation'
 const DEFAULT_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map((c) => c.id))
 
 export function SettingsPage() {
-  const { store, updateSettings, setMonthTheme, addCategory, updateCategory, removeCategory, resetCategories, currentYear } = usePlanner()
+  const { store, updateSettings, setMonthTheme, addCategory, updateCategory, removeCategory, resetCategories, recategorizePrelateEvents, currentYear } = usePlanner()
   const { user } = useAuth()
   const userId = user?.id ?? null
   const canUseBackgroundPush = isSupabaseConfigured && userId !== null && userId !== 'local-guest'
@@ -34,6 +34,7 @@ export function SettingsPage() {
   const [showShareModal, setShowShareModal] = useState(false)
   const [showIcsImport, setShowIcsImport] = useState(false)
   const [showTableImport, setShowTableImport] = useState(false)
+  const [prelateRecategorizedCount, setPrelateRecategorizedCount] = useState<number | null>(null)
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   )
@@ -71,7 +72,7 @@ export function SettingsPage() {
       if (perm !== 'granted') return
     }
     setPushStatus('loading')
-    const result = await subscribeToPush(userId ?? undefined)
+    const result = await subscribeToPush()
     if (result.ok) {
       setPushStatus('subscribed')
     } else {
@@ -523,7 +524,22 @@ export function SettingsPage() {
                 >
                   <FileUp size={14} /> Download Template
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setPrelateRecategorizedCount(recategorizePrelateEvents())}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+                  style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
+                >
+                  <RotateCcw size={14} /> Recolour PRELATE 2026
+                </button>
               </div>
+              {prelateRecategorizedCount !== null && (
+                <p className="text-xs" style={{ color: prelateRecategorizedCount > 0 ? '#34d399' : '#94a3b8' }}>
+                  {prelateRecategorizedCount > 0
+                    ? `Updated ${prelateRecategorizedCount} PRELATE event${prelateRecategorizedCount === 1 ? '' : 's'}.`
+                    : 'No PRELATE events needed updating.'}
+                </p>
+              )}
             </div>
 
             <div
@@ -668,3 +684,4 @@ function EditCategoryRow({
     </div>
   )
 }
+

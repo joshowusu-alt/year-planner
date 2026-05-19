@@ -41,10 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // onAuthStateChange handles all session events:
-    //   INITIAL_SESSION — fired once on load (with session from storage or URL token)
+    //   INITIAL_SESSION — fired once on load (with session from storage or OAuth callback processing)
     //   SIGNED_IN       — after OAuth redirect is processed
     //   SIGNED_OUT      — after sign-out
-    // detectSessionInUrl: true (set on the client) reads #access_token= from the URL.
+    // detectSessionInUrl: true (set on the client) processes ?code= callbacks automatically.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSupabaseUser(session?.user ?? null)
       setLoading(false)
@@ -107,3 +107,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
   return ctx
 }
+

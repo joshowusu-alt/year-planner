@@ -40,6 +40,9 @@ const ToastView = memo(function ToastView() {
     <>
       <style>{`@keyframes undoProgress { from { width: 100% } to { width: 0% } }`}</style>
       <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
         style={{
           position: 'fixed',
           bottom: 0,

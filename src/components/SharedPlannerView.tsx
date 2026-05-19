@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { X, Eye, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
-import { fetchSharedPlannerData } from '../lib/sharing'
 import type { PlannerStore, PlannerEvent, EventCategoryDef } from '../types'
 
 interface Props {
@@ -94,19 +93,23 @@ export function SharedPlannerView({ token, onClose }: Props) {
   const [year, setYear] = useState(new Date().getFullYear())
 
   useEffect(() => {
-    fetchSharedPlannerData(token).then((data) => {
-      if (data) {
+    fetch(`/api/shared-planner?token=${encodeURIComponent(token)}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error('not_found')
+        return res.json() as Promise<PlannerStore>
+      })
+      .then((data) => {
         setStore(data)
-        // Try to detect the most relevant year from the data
         if (data.events.length > 0) {
-          const firstYear = parseInt(data.events[0].date.slice(0, 4), 10)
-          if (!isNaN(firstYear)) setYear(firstYear)
+          const years = data.events.map((e) => parseInt(e.date.slice(0, 4), 10)).filter((y) => !isNaN(y))
+          if (years.length > 0) setYear(Math.min(...years))
         }
-      } else {
+        setLoading(false)
+      })
+      .catch(() => {
         setError(true)
-      }
-      setLoading(false)
-    })
+        setLoading(false)
+      })
   }, [token])
 
   const plannerTitle = store?.plannerTitle
@@ -120,7 +123,6 @@ export function SharedPlannerView({ token, onClose }: Props) {
       className="fixed inset-0 z-50 flex flex-col overflow-hidden"
       style={{ background: '#0a0e1a' }}
     >
-      {/* Top banner */}
       <div
         className="flex items-center justify-between px-4 py-3 shrink-0"
         style={{ background: '#1e2a3e', borderBottom: '1px solid #243447' }}
@@ -136,6 +138,7 @@ export function SharedPlannerView({ token, onClose }: Props) {
         </div>
         <button
           onClick={onClose}
+          aria-label="Close shared planner view"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-white/10 transition-colors shrink-0 ml-3 min-w-11 min-h-11"
           style={{ color: '#e2e8f0', border: '1px solid #243447' }}
         >
@@ -143,7 +146,6 @@ export function SharedPlannerView({ token, onClose }: Props) {
         </button>
       </div>
 
-      {/* Body */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-3">
@@ -163,6 +165,7 @@ export function SharedPlannerView({ token, onClose }: Props) {
             </p>
             <button
               onClick={onClose}
+              aria-label="Close shared planner view"
               className="mt-2 px-4 py-2 rounded-lg text-sm font-bold"
               style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
             >
@@ -171,7 +174,6 @@ export function SharedPlannerView({ token, onClose }: Props) {
           </div>
         ) : (
           <div className="p-4 md:p-6 max-w-6xl mx-auto">
-            {/* Header row */}
             <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
               <div>
                 {store.organizationName && (
@@ -187,7 +189,6 @@ export function SharedPlannerView({ token, onClose }: Props) {
                 </h2>
               </div>
 
-              {/* Year navigation */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setYear((y) => y - 1)}
@@ -214,7 +215,6 @@ export function SharedPlannerView({ token, onClose }: Props) {
               </div>
             </div>
 
-            {/* 12-month grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                 <ReadOnlyMonthCard
@@ -227,7 +227,6 @@ export function SharedPlannerView({ token, onClose }: Props) {
               ))}
             </div>
 
-            {/* Footer note */}
             <p
               className="text-xs text-center mt-8 pb-4"
               style={{ color: '#94a3b8' }}

@@ -11,6 +11,11 @@ const SUPABASE_TABLE = 'planner_data'
 
 const STORAGE_KEY = 'yearplanner_data'
 
+export interface SupabaseLoadResult {
+  store: PlannerStore
+  updatedAt: string | null
+}
+
 // ─── Default month meta ───────────────────────────────────────────────────────
 
 function defaultMonthMeta(): MonthMeta[] {
@@ -63,14 +68,26 @@ export function saveStore(store: PlannerStore): void {
  * Returns null if not found or Supabase is not configured.
  */
 export async function loadStoreFromSupabase(userId: string): Promise<PlannerStore | null> {
+  const result = await loadStoreFromSupabaseWithMeta(userId)
+  return result?.store ?? null
+}
+
+/**
+ * Load a user's planner from Supabase, also returning the DB's updated_at timestamp.
+ * Use this when you want to detect remote conflicts before saving.
+ */
+export async function loadStoreFromSupabaseWithMeta(userId: string): Promise<SupabaseLoadResult | null> {
   if (!supabase || !isSupabaseConfigured) return null
   const { data, error } = await supabase
     .from(SUPABASE_TABLE)
-    .select('store')
+    .select('store, updated_at')
     .eq('user_id', userId)
     .single()
   if (error || !data?.store) return null
-  return { ...defaultStore(), ...(data.store as Partial<PlannerStore>) }
+  return {
+    store: { ...defaultStore(), ...(data.store as Partial<PlannerStore>) },
+    updatedAt: (data.updated_at as string) ?? null,
+  }
 }
 
 /**
@@ -84,6 +101,46 @@ export async function saveStoreToSupabase(userId: string, store: PlannerStore): 
       { user_id: userId, store, updated_at: new Date().toISOString() },
       { onConflict: 'user_id' }
     )
+}
+
+/**
+ * Upsert a user's planner to Supabase, checking for remote conflicts first.
+ * Returns { ok: true } on success, { ok: false, conflict: true } if remote was modified
+ * after lastKnownUpdatedAt, { ok: false, error: string } on DB error.
+ */
+export async function saveStoreToSupabaseChecked(
+  userId: string,
+  store: PlannerStore,
+  lastKnownUpdatedAt: string | null,
+): Promise<{ ok: boolean; conflict?: boolean; error?: string }> {
+  if (!supabase || !isSupabaseConfigured) return { ok: true }
+
+  if (lastKnownUpdatedAt) {
+    const { data, error } = await supabase
+      .from(SUPABASE_TABLE)
+      .select('updated_at')
+      .eq('user_id', userId)
+      .single()
+
+    if (!error && data?.updated_at) {
+      const remoteTs = new Date(data.updated_at as string).getTime()
+      const localTs  = new Date(lastKnownUpdatedAt).getTime()
+      if (remoteTs > localTs + 5000) {
+        return { ok: false, conflict: true }
+      }
+    }
+  }
+
+  const newUpdatedAt = new Date().toISOString()
+  const { error } = await supabase
+    .from(SUPABASE_TABLE)
+    .upsert(
+      { user_id: userId, store, updated_at: newUpdatedAt },
+      { onConflict: 'user_id' }
+    )
+
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
 }
 
 // ─── Event CRUD ───────────────────────────────────────────────────────────────

@@ -19,8 +19,6 @@ create policy "Owners manage their own shares"
   using (auth.uid() = owner_user_id)
   with check (auth.uid() = owner_user_id);
 
--- Anyone can read a share token (needed for the public share feature)
-create policy "Public can read share tokens"
-  on public.planner_shares
-  for select
-  using (true);
+-- Public token resolution is handled by the server-side /api/shared-planner route.
+-- No direct public client select policy is required.
+
