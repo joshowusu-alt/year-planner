@@ -26,8 +26,8 @@ import { isSupabaseConfigured } from '../lib/supabase'
 import {
   loadStore,
   saveStore,
-  loadStoreFromSupabase,
-  saveStoreToSupabase,
+  loadStoreFromSupabaseWithMeta,
+  saveStoreToSupabaseChecked,
   createEvent,
   bulkCreateEvents,
   updateEvent,
@@ -58,51 +58,40 @@ import {
   deleteEventOccurrence,
 } from '../lib/storage'
 
-// ─── Context type ─────────────────────────────────────────────────────────────
-
 interface PlannerContextValue {
   store: PlannerStore
-  // Events
   addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null, timezone?: string) => void
   bulkAddEvents: (events: Array<Omit<PlannerEvent, 'id' | 'createdAt' | 'updatedAt'>>) => void
+  recategorizePrelateEvents: () => number
   editEvent: (id: string, patch: Partial<PlannerEvent>) => void
   removeEvent: (id: string) => void
   editEventInstance: (baseId: string, dateStr: string, patch: { title?: string; category?: string; notes?: string; startTime?: string; endTime?: string }) => void
   removeEventOccurrence: (baseId: string, dateStr: string) => void
   getEventsForDate: (dateStr: string) => PlannerEvent[]
-  // Month themes
   setMonthTheme: (month: number, year: number, theme: string) => void
-  // Goals
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt' | 'milestones'>) => void
   editGoal: (id: string, patch: Partial<Goal>) => void
   removeGoal: (id: string) => void
   addMilestoneToGoal: (goalId: string, milestone: Omit<Milestone, 'id' | 'goalId' | 'createdAt'>) => void
   editMilestone: (goalId: string, milestoneId: string, patch: Partial<Milestone>) => void
   removeMilestone: (goalId: string, milestoneId: string) => void
-  // Tasks
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void
   editTask: (id: string, patch: Partial<Task>) => void
   removeTask: (id: string) => void
   toggleTask: (id: string) => void
-  // Notes
   addNote: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => void
   editNote: (id: string, patch: Partial<Note>) => void
   removeNote: (id: string) => void
-  // Settings
   updateSettings: (patch: Partial<Pick<PlannerStore, 'organizationName' | 'plannerTitle' | 'accentColor' | 'logoUrl'>>) => void
-  // Categories
   addCategory: (cat: Omit<EventCategoryDef, 'id'>) => void
   updateCategory: (id: string, patch: Partial<EventCategoryDef>) => void
   removeCategory: (id: string) => void
   resetCategories: () => void
-  // Vital Few
   addVitalFew: (item: Omit<VitalFew, 'id' | 'createdAt' | 'updatedAt'>) => void
   editVitalFew: (id: string, patch: Partial<VitalFew>) => void
   removeVitalFew: (id: string) => void
-  // Weekly Reviews
   addWeeklyReview: (item: Omit<WeeklyReview, 'id' | 'createdAt' | 'updatedAt'>) => void
   editWeeklyReview: (id: string, patch: Partial<WeeklyReview>) => void
-  // Navigation state
   currentYear: number
   setCurrentYear: (y: number) => void
   currentMonth: number
@@ -110,20 +99,21 @@ interface PlannerContextValue {
   currentWeekStart: string
   setCurrentWeekStart: (d: string) => void
   isSyncing: boolean
+  conflictWarning: boolean
+  dismissConflict: () => void
 }
 
 const PlannerContext = createContext<PlannerContextValue | null>(null)
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
-
 export function PlannerProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const syncUserId = user?.id && user.id !== 'local-guest' ? user.id : null
   const [store, setStore] = useState<PlannerStore>(loadStore)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [conflictWarning, setConflictWarning] = useState(false)
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1)
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
-    // Monday of current week
     const d = new Date()
     const day = d.getDay()
     const diff = day === 0 ? -6 : 1 - day
@@ -131,63 +121,98 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     return d.toISOString().split('T')[0]
   })
 
-  // Tracks whether we've finished the initial Supabase load so we don't
-  // write stale localStorage data back to the server before it arrives.
-  const isLoadedRef = useRef(!isSupabaseConfigured || !user?.id)
+  const isLoadedRef = useRef(!isSupabaseConfigured || !syncUserId)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Refs used in beforeunload to avoid stale closures
-  const storeRef  = useRef(store)
-  const userIdRef = useRef(user?.id)
-  useEffect(() => { storeRef.current = store }, [store])
-  useEffect(() => { userIdRef.current = user?.id }, [user?.id])
+  const lastSyncedAtRef = useRef<string | null>(null)
+  const conflictPauseRef = useRef(false)
+  const storeRef = useRef(store)
+  const userIdRef = useRef(syncUserId)
 
-  // ── Flush to Supabase immediately on tab close (fix #2) ──
+  useEffect(() => { storeRef.current = store }, [store])
+  useEffect(() => { userIdRef.current = syncUserId }, [syncUserId])
+
+  const dismissConflict = useCallback(() => {
+    setConflictWarning(false)
+  }, [])
+
   useEffect(() => {
     const flush = () => {
       if (!userIdRef.current || !isSupabaseConfigured || !isLoadedRef.current) return
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-      // Best-effort — modern browsers give async calls a short grace period
-      saveStoreToSupabase(userIdRef.current, storeRef.current)
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+      }
+      void saveStoreToSupabaseChecked(userIdRef.current, storeRef.current, lastSyncedAtRef.current).then((result) => {
+        if (result.ok) {
+          lastSyncedAtRef.current = new Date().toISOString()
+        }
+      })
     }
     window.addEventListener('beforeunload', flush)
     return () => window.removeEventListener('beforeunload', flush)
   }, [])
 
-  // ── Load from Supabase whenever the signed-in user changes ──
   useEffect(() => {
-    if (!user?.id || !isSupabaseConfigured) {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+
+    if (!syncUserId || !isSupabaseConfigured) {
       isLoadedRef.current = true
+      lastSyncedAtRef.current = null
+      conflictPauseRef.current = false
+      setConflictWarning(false)
       return
     }
+
+    conflictPauseRef.current = false
     isLoadedRef.current = false
+    setConflictWarning(false)
     setIsSyncing(true)
-    loadStoreFromSupabase(user.id)
+    loadStoreFromSupabaseWithMeta(syncUserId)
       .then((remote) => {
         if (remote) {
-          setStore(remote)
-          saveStore(remote) // update local cache
+          setStore(remote.store)
+          saveStore(remote.store)
+          lastSyncedAtRef.current = remote.updatedAt
+        } else {
+          lastSyncedAtRef.current = null
         }
         isLoadedRef.current = true
         setIsSyncing(false)
       })
       .catch(() => {
-        // Network error — fall through and use localStorage data
+        lastSyncedAtRef.current = null
         isLoadedRef.current = true
         setIsSyncing(false)
       })
-  }, [user?.id])
+  }, [syncUserId])
 
-  // ── Persist on every store change ──
   useEffect(() => {
-    saveStore(store) // always update localStorage cache
-    if (!isLoadedRef.current || !user?.id || !isSupabaseConfigured) return
+    saveStore(store)
+    if (!isLoadedRef.current || !syncUserId || !isSupabaseConfigured) return
+    if (conflictPauseRef.current) return
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      saveStoreToSupabase(user.id!, store)
+      void saveStoreToSupabaseChecked(syncUserId, store, lastSyncedAtRef.current).then((result) => {
+        saveTimerRef.current = null
+        if (result.ok) {
+          lastSyncedAtRef.current = new Date().toISOString()
+          return
+        }
+        if (result.conflict) {
+          conflictPauseRef.current = true
+          setConflictWarning(true)
+          return
+        }
+        if (result.error) {
+          console.error('Planner sync save failed:', result.error)
+        }
+      })
     }, 1500)
-  }, [store, user?.id])
+  }, [store, syncUserId])
 
-  // ── Events ──
   const addEvent = useCallback((date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null, timezone?: string) => {
     setStore((s) => createEvent(s, { date, title, category, notes, recurrence, startTime, endTime, reminder, timezone }))
   }, [])
@@ -195,6 +220,53 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   const bulkAddEvents = useCallback((events: Array<Omit<PlannerEvent, 'id' | 'createdAt' | 'updatedAt'>>) => {
     setStore((s) => bulkCreateEvents(s, events))
   }, [])
+
+  const recategorizePrelateEvents = useCallback((): number => {
+    const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+    const pickCategoryId = (categories: EventCategoryDef[], label: string) =>
+      categories.find((category) => normalize(category.label) === normalize(label))?.id
+
+    const categoryForTitle = (title: string): string => {
+      const text = title.toLowerCase()
+      if (/\bph\b|public h|public holiday|good friday|easter|founders|republic day|farmers|christmas|boxing day/.test(text)) {
+        return 'PH- PUBLIC HOLIDAY'
+      }
+      if (/\bbsg\b|bible society/.test(text)) return 'BIBLE SOCIETY GHANA-BSG'
+      if (/sons|others/.test(text)) return 'SONS & OTHERS'
+      return 'PEREZ DOME PROGRAMS'
+    }
+
+    const categoryIds = new Map(
+      [
+        'PEREZ DOME PROGRAMS',
+        'SONS & OTHERS',
+        'BIBLE SOCIETY GHANA-BSG',
+        'PH- PUBLIC HOLIDAY',
+      ].map((label) => [label, pickCategoryId(store.categories, label)]),
+    )
+
+    let updatedCount = 0
+    const updatedEvents = store.events.map((event) => {
+      if (!event.notes?.includes('Source: PRELATE 2026 Planner')) return event
+
+      const targetLabel = categoryForTitle(event.title)
+      const categoryId = categoryIds.get(targetLabel)
+      if (!categoryId || event.category === categoryId) return event
+
+      updatedCount++
+      return {
+        ...event,
+        category: categoryId,
+        updatedAt: new Date().toISOString(),
+      }
+    })
+
+    if (updatedCount > 0) {
+      setStore((s) => ({ ...s, events: updatedEvents }))
+    }
+
+    return updatedCount
+  }, [store.categories, store.events])
 
   const editEvent = useCallback((id: string, patch: Partial<PlannerEvent>) => {
     setStore((s) => updateEvent(s, getBaseEventId(id), patch))
@@ -220,8 +292,6 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     return store.events
       .filter((ev) => isRecurringOnDate(ev, dateStr))
       .map((ev) => {
-        // Mark EVERY occurrence of a recurring event as virtual (including the
-        // base date) so the scope toggle always shows when editing.
         if (!ev.recurrence?.type || ev.recurrence.type === 'none') return ev
         const override = ev.instanceOverrides?.[dateStr]
         return { ...ev, ...(override ?? {}), id: `${ev.id}__${dateStr}`, date: dateStr }
@@ -232,7 +302,6 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setStore((s) => updateMonthMeta(s, month, year, { theme }))
   }, [])
 
-  // ── Goals ──
   const addGoal = useCallback((goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt' | 'milestones'>) => {
     const goalWithOwner = user?.id ? { ...goal, userId: user.id } : goal
     setStore((s) => createGoal(s, goalWithOwner))
@@ -258,7 +327,6 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setStore((s) => deleteMilestone(s, goalId, milestoneId))
   }, [])
 
-  // ── Tasks ──
   const addTask = useCallback((task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
     const taskWithOwner = user?.id ? { ...task, userId: user.id } : task
     setStore((s) => createTask(s, taskWithOwner))
@@ -280,7 +348,6 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  // ── Notes ──
   const addNote = useCallback((note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => {
     setStore((s) => createNote(s, note))
   }, [])
@@ -293,13 +360,13 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setStore((s) => deleteNote(s, id))
   }, [])
 
-  // ── Settings ──
   const updateSettings = useCallback(
     (patch: Partial<Pick<PlannerStore, 'organizationName' | 'plannerTitle' | 'accentColor' | 'logoUrl'>>) => {
       setStore((s) => ({ ...s, ...patch }))
-    }, [])
+    },
+    []
+  )
 
-  // ── Categories ──
   const addCategory = useCallback((cat: Omit<EventCategoryDef, 'id'>) => {
     setStore((s) => storageAddCategory(s, cat))
   }, [])
@@ -316,7 +383,6 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setStore((s) => storageResetCategories(s))
   }, [])
 
-  // ── Vital Few ──
   const addVitalFew = useCallback((item: Omit<VitalFew, 'id' | 'createdAt' | 'updatedAt'>) => {
     setStore((s) => createVitalFew(s, item))
   }, [])
@@ -329,7 +395,6 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setStore((s) => deleteVitalFew(s, id))
   }, [])
 
-  // ── Weekly Reviews ──
   const addWeeklyReview = useCallback((item: Omit<WeeklyReview, 'id' | 'createdAt' | 'updatedAt'>) => {
     setStore((s) => createWeeklyReview(s, item))
   }, [])
@@ -341,7 +406,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   return (
     <PlannerContext.Provider value={{
       store,
-      addEvent, bulkAddEvents, editEvent, removeEvent, editEventInstance, removeEventOccurrence, getEventsForDate, setMonthTheme,
+      addEvent, bulkAddEvents, recategorizePrelateEvents, editEvent, removeEvent, editEventInstance, removeEventOccurrence, getEventsForDate, setMonthTheme,
       addGoal, editGoal, removeGoal,
       addMilestoneToGoal, editMilestone, removeMilestone,
       addTask, editTask, removeTask, toggleTask,
@@ -354,13 +419,13 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       currentMonth, setCurrentMonth,
       currentWeekStart, setCurrentWeekStart,
       isSyncing,
+      conflictWarning,
+      dismissConflict,
     }}>
       {children}
     </PlannerContext.Provider>
   )
 }
-
-// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function usePlanner() {
   const ctx = useContext(PlannerContext)
