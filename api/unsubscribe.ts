@@ -2,20 +2,45 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') return res.status(405).end()
-  const { endpoint } = req.body as { endpoint: string }
-  if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' })
+  try {
+    if (req.method !== 'POST') return res.status(405).end()
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+    const authHeader = req.headers['authorization']
+    const accessToken = authHeader?.toString().replace(/^Bearer\s+/i, '')
+    if (!accessToken) {
+      return res.status(401).json({ error: 'Missing Authorization header' })
+    }
 
-  const { error } = await supabase
-    .from('push_subscriptions')
-    .delete()
-    .eq('endpoint', endpoint)
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      return res.status(500).json({ error: 'Missing Supabase env vars' })
+    }
 
-  if (error) return res.status(500).json({ error: error.message })
-  return res.status(200).json({ ok: true })
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    })
+    const { data: { user }, error: authError } = await userClient.auth.getUser()
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' })
+    }
+
+    const { endpoint } = req.body as { endpoint: string }
+    if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' })
+
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
+    const { error } = await serviceClient
+      .from('push_subscriptions')
+      .delete()
+      .eq('endpoint', endpoint)
+      .eq('user_id', user.id)
+
+    if (error) return res.status(500).json({ error: error.message })
+    return res.status(200).json({ ok: true })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('unsubscribe handler crash:', msg)
+    return res.status(500).json({ error: msg })
+  }
 }
