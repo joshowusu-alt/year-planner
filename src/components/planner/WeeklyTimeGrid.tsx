@@ -2,7 +2,7 @@
  * Weekly Time Grid — Google-Calendar-style hourly grid view
  * Supports desktop (7 columns) and mobile (1 column with day-nav) layouts.
  */
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { addDays, format, isToday, subDays } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
@@ -226,12 +226,12 @@ export function WeeklyTimeGrid() {
   const autoScrollRafRef = useRef<number | null>(null)
 
   // Week days
-  const weekStart = new Date(currentWeekStart)
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const weekStart = useMemo(() => new Date(currentWeekStart), [currentWeekStart])
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
 
   // Mobile: single selected day (stored as date string so it survives week changes gracefully)
   const todayStr = format(new Date(), 'yyyy-MM-dd')
-  const weekDayStrs = days.map((d) => format(d, 'yyyy-MM-dd'))
+  const weekDayStrs = useMemo(() => days.map((d) => format(d, 'yyyy-MM-dd')), [days])
   const initialDay = weekDayStrs.includes(todayStr) ? todayStr : weekDayStrs[0]
   const [selectedDayStr, setSelectedDayStr] = useState<string>(initialDay)
 
@@ -240,7 +240,7 @@ export function WeeklyTimeGrid() {
   const selectedDayIndex = weekDayStrs.indexOf(effectiveDayStr)
 
   // Which days are visible (all 7 on desktop, 1 on mobile)
-  const visibleDays = isMobile ? [days[selectedDayIndex]] : days
+  const visibleDays = useMemo(() => (isMobile ? [days[selectedDayIndex]] : days), [isMobile, days, selectedDayIndex])
 
   // Modal state
   const [editingEvent, setEditingEvent] = useState<PlannerEvent | null>(null)

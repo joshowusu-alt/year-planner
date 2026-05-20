@@ -58,6 +58,8 @@ import {
   deleteEventOccurrence,
 } from '../lib/storage'
 
+export type PlannerSyncMode = 'local' | 'syncing' | 'synced' | 'conflict' | 'error'
+
 interface PlannerContextValue {
   store: PlannerStore
   addEvent: (date: string, title: string, category: EventCategory, notes?: string, recurrence?: RecurrenceRule, startTime?: string, endTime?: string, reminder?: number | null, timezone?: string) => void
@@ -98,7 +100,11 @@ interface PlannerContextValue {
   setCurrentMonth: (m: number) => void
   currentWeekStart: string
   setCurrentWeekStart: (d: string) => void
+  lastSyncedAt: string | null
+  syncError: string | null
+  syncMode: PlannerSyncMode
   isSyncing: boolean
+  forceSync: () => void
   conflictWarning: boolean
   dismissConflict: () => void
 }
@@ -110,6 +116,9 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   const syncUserId = user?.id && user.id !== 'local-guest' ? user.id : null
   const [store, setStore] = useState<PlannerStore>(loadStore)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null)
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncMode, setSyncMode] = useState<PlannerSyncMode>('local')
   const [conflictWarning, setConflictWarning] = useState(false)
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1)
@@ -135,6 +144,32 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     setConflictWarning(false)
   }, [])
 
+  const forceSync = useCallback(() => {
+    if (!syncUserId || !isSupabaseConfigured || isSyncing) return
+    setConflictWarning(false)
+    conflictPauseRef.current = false
+    setIsSyncing(true)
+    setSyncError(null)
+    setSyncMode('syncing')
+    loadStoreFromSupabaseWithMeta(syncUserId)
+      .then((remote) => {
+        if (remote) {
+          setStore(remote.store)
+          saveStore(remote.store)
+          lastSyncedAtRef.current = remote.updatedAt
+          setLastSyncedAt(remote.updatedAt)
+        }
+        setSyncError(null)
+        setSyncMode('synced')
+        setIsSyncing(false)
+      })
+      .catch(() => {
+        setSyncError('Could not load latest planner data.')
+        setSyncMode('error')
+        setIsSyncing(false)
+      })
+  }, [syncUserId, isSyncing])
+
   useEffect(() => {
     const flush = () => {
       if (!userIdRef.current || !isSupabaseConfigured || !isLoadedRef.current) return
@@ -144,7 +179,11 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       }
       void saveStoreToSupabaseChecked(userIdRef.current, storeRef.current, lastSyncedAtRef.current).then((result) => {
         if (result.ok) {
-          lastSyncedAtRef.current = new Date().toISOString()
+          const syncedAt = new Date().toISOString()
+          lastSyncedAtRef.current = syncedAt
+          setLastSyncedAt(syncedAt)
+          setSyncError(null)
+          setSyncMode('synced')
         }
       })
     }
@@ -163,12 +202,18 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       lastSyncedAtRef.current = null
       conflictPauseRef.current = false
       setConflictWarning(false)
+      setLastSyncedAt(null)
+      setSyncError(null)
+      setSyncMode('local')
+      setIsSyncing(false)
       return
     }
 
     conflictPauseRef.current = false
     isLoadedRef.current = false
     setConflictWarning(false)
+    setSyncError(null)
+    setSyncMode('syncing')
     setIsSyncing(true)
     loadStoreFromSupabaseWithMeta(syncUserId)
       .then((remote) => {
@@ -176,15 +221,22 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           setStore(remote.store)
           saveStore(remote.store)
           lastSyncedAtRef.current = remote.updatedAt
+          setLastSyncedAt(remote.updatedAt)
         } else {
           lastSyncedAtRef.current = null
+          setLastSyncedAt(null)
         }
         isLoadedRef.current = true
+        setSyncError(null)
+        setSyncMode('synced')
         setIsSyncing(false)
       })
       .catch(() => {
         lastSyncedAtRef.current = null
+        setLastSyncedAt(null)
         isLoadedRef.current = true
+        setSyncError('Could not load planner data from Supabase.')
+        setSyncMode('error')
         setIsSyncing(false)
       })
   }, [syncUserId])
@@ -194,20 +246,34 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     if (!isLoadedRef.current || !syncUserId || !isSupabaseConfigured) return
     if (conflictPauseRef.current) return
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    setSyncError(null)
+    setSyncMode('syncing')
+    setIsSyncing(true)
     saveTimerRef.current = setTimeout(() => {
       void saveStoreToSupabaseChecked(syncUserId, store, lastSyncedAtRef.current).then((result) => {
         saveTimerRef.current = null
         if (result.ok) {
-          lastSyncedAtRef.current = new Date().toISOString()
+          const syncedAt = new Date().toISOString()
+          lastSyncedAtRef.current = syncedAt
+          setLastSyncedAt(syncedAt)
+          setSyncError(null)
+          setSyncMode('synced')
+          setIsSyncing(false)
           return
         }
         if (result.conflict) {
           conflictPauseRef.current = true
           setConflictWarning(true)
+          setSyncError(null)
+          setSyncMode('conflict')
+          setIsSyncing(false)
           return
         }
         if (result.error) {
           console.error('Planner sync save failed:', result.error)
+          setSyncError(result.error)
+          setSyncMode('error')
+          setIsSyncing(false)
         }
       })
     }, 1500)
@@ -418,7 +484,11 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       currentYear, setCurrentYear,
       currentMonth, setCurrentMonth,
       currentWeekStart, setCurrentWeekStart,
+      lastSyncedAt,
+      syncError,
+      syncMode,
       isSyncing,
+      forceSync,
       conflictWarning,
       dismissConflict,
     }}>

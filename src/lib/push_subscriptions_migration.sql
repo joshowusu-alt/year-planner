@@ -21,3 +21,39 @@ ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 --   CREATE POLICY "Users read own subscriptions"
 --     ON push_subscriptions FOR SELECT USING (auth.uid() = user_id);
 -- For now, all access goes through the API routes only.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'push_subscriptions'
+      AND policyname = 'Service role full access'
+  ) THEN
+    CREATE POLICY "Service role full access"
+      ON public.push_subscriptions
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'push_subscriptions'
+      AND policyname = 'Users manage own subscriptions'
+  ) THEN
+    CREATE POLICY "Users manage own subscriptions"
+      ON public.push_subscriptions
+      FOR ALL
+      TO authenticated
+      USING  (auth.uid() = user_id)
+      WITH CHECK (auth.uid() = user_id);
+  END IF;
+END
+$$;

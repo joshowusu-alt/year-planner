@@ -224,6 +224,7 @@ export interface WeeklyReview {
 // ─── Planner Store ───────────────────────────────────────────────────────────
 
 export interface PlannerStore {
+  schemaVersion: number
   events: PlannerEvent[]
   monthMeta: MonthMeta[]
   goals: Goal[]

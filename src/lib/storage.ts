@@ -2,12 +2,55 @@
  * Local-storage data layer.
  * Supabase sync is layered on top when credentials are configured.
  */
-import type { PlannerStore, MonthMeta, Goal, Task, Note, Milestone, EventCategoryDef, VitalFew, WeeklyReview } from '../types'
-import { DEFAULT_CATEGORIES } from '../types'
-import { format } from 'date-fns'
+import type { PlannerStore, MonthMeta } from '../types/index.ts'
+import { DEFAULT_CATEGORIES } from '../types/index.ts'
 import { supabase, isSupabaseConfigured } from './supabase'
+export {
+  createEvent, bulkCreateEvents, updateEvent, deleteEvent, updateEventInstance, deleteEventOccurrence,
+  updateMonthMeta,
+  createGoal, updateGoal, deleteGoal, addMilestone, updateMilestone, deleteMilestone,
+  createTask, updateTask, deleteTask,
+  createNote, updateNote, deleteNote,
+  getEventsForDate, getTasksForPeriod, getGoalsByQuarter, getNotesByPeriod,
+  addCategory, updateCategory, removeCategory, resetCategories,
+  createVitalFew, updateVitalFew, deleteVitalFew,
+  createWeeklyReview, updateWeeklyReview,
+} from './store-ops.ts'
 
 const SUPABASE_TABLE = 'planner_data'
+const STRUCTURED_SYNC_ENABLED = import.meta.env.VITE_USE_STRUCTURED_SYNC === 'true'
+const LARGE_STORE_WARNING_BYTES = 500_000
+
+const STRUCTURED_TABLES = {
+  events: 'planner_events',
+  tasks: 'planner_tasks',
+  goals: 'planner_goals',
+  notes: 'planner_notes',
+  categories: 'planner_categories',
+  monthMeta: 'planner_month_meta',
+  vitalFew: 'planner_vital_few',
+  weeklyReviews: 'planner_weekly_reviews',
+} as const
+
+const STRUCTURED_KEYS = Object.keys(STRUCTURED_TABLES) as Array<keyof typeof STRUCTURED_TABLES>
+
+type StructuredSelectResult<T> = Promise<{ data: T[] | null; error: { message: string } | null }>
+
+type StructuredTableClient = {
+  select: (columns: string) => {
+    eq: (column: string, value: string) => StructuredSelectResult<Record<string, unknown>>
+  }
+  upsert: (rows: Record<string, unknown>[], options: { onConflict: string }) => Promise<{ error: { message: string } | null }>
+  update: (patch: Record<string, unknown>) => {
+    eq: (column: string, value: string) => {
+      in: (column: string, values: string[]) => Promise<{ error: { message: string } | null }>
+    }
+  }
+}
+
+type StructuredSupabaseClient = {
+  from: (table: string) => StructuredTableClient
+}
 
 const STORAGE_KEY = 'yearplanner_data'
 
@@ -31,6 +74,7 @@ function defaultMonthMeta(): MonthMeta[] {
 
 function defaultStore(): PlannerStore {
   return {
+    schemaVersion: 1,
     events: [],
     monthMeta: defaultMonthMeta(),
     goals: [],
@@ -45,19 +89,145 @@ function defaultStore(): PlannerStore {
   }
 }
 
+function normalizeStore(store?: Partial<PlannerStore> | null): PlannerStore {
+  const normalized = { ...defaultStore(), ...(store ?? {}) }
+  normalized.schemaVersion = typeof store?.schemaVersion === 'number' ? store.schemaVersion : 1
+  return normalized
+}
+
+export function estimateStoreSizeBytes(store: PlannerStore): number {
+  return new TextEncoder().encode(JSON.stringify(store)).length
+}
+
+function warnIfStoreLarge(store: PlannerStore) {
+  const sizeBytes = estimateStoreSizeBytes(store)
+  if (sizeBytes > LARGE_STORE_WARNING_BYTES) {
+    console.warn(`Planner store is ${Math.round(sizeBytes / 1024)} KB. Consider enabling structured sync before it grows much further.`)
+  }
+}
+
+function getStructuredRowId(key: keyof typeof STRUCTURED_TABLES, item: unknown): string {
+  if (key === 'monthMeta') {
+    const value = item as MonthMeta
+    return `${value.year}-${String(value.month).padStart(2, '0')}`
+  }
+
+  return (item as { id: string }).id
+}
+
+function getStructuredUpdatedAt(item: unknown): string {
+  const value = item as { updatedAt?: string; createdAt?: string }
+  return value.updatedAt ?? value.createdAt ?? new Date().toISOString()
+}
+
+function getStructuredCreatedAt(item: unknown, fallbackIso: string): string {
+  const value = item as { createdAt?: string }
+  return value.createdAt ?? fallbackIso
+}
+
+async function loadStructuredStoreFromSupabase(userId: string, snapshotStore: PlannerStore | null): Promise<PlannerStore | null> {
+  if (!supabase || !STRUCTURED_SYNC_ENABLED) return snapshotStore
+
+  try {
+    const structuredClient = supabase as unknown as StructuredSupabaseClient
+    const rowsByKey = Object.fromEntries(
+      await Promise.all(
+        STRUCTURED_KEYS.map(async (key) => {
+          const { data, error } = await structuredClient
+            .from(STRUCTURED_TABLES[key])
+            .select('payload, deleted_at')
+            .eq('user_id', userId)
+
+          if (error) throw new Error(error.message)
+          return [key, (data ?? []) as Array<{ payload: unknown; deleted_at: string | null }>]
+        }),
+      ),
+    ) as Record<keyof typeof STRUCTURED_TABLES, Array<{ payload: unknown; deleted_at: string | null }>>
+
+    const hasStructuredData = Object.values(rowsByKey).some((rows) => rows.some((row) => !row.deleted_at))
+    if (!hasStructuredData) return snapshotStore
+
+    const base = normalizeStore(snapshotStore)
+    base.events = rowsByKey.events.filter((row) => !row.deleted_at).map((row) => row.payload as PlannerStore['events'][number])
+    base.tasks = rowsByKey.tasks.filter((row) => !row.deleted_at).map((row) => row.payload as PlannerStore['tasks'][number])
+    base.goals = rowsByKey.goals.filter((row) => !row.deleted_at).map((row) => row.payload as PlannerStore['goals'][number])
+    base.notes = rowsByKey.notes.filter((row) => !row.deleted_at).map((row) => row.payload as PlannerStore['notes'][number])
+    base.categories = rowsByKey.categories.filter((row) => !row.deleted_at).map((row) => row.payload as PlannerStore['categories'][number])
+    base.monthMeta = rowsByKey.monthMeta.filter((row) => !row.deleted_at).map((row) => row.payload as PlannerStore['monthMeta'][number])
+    base.vitalFew = rowsByKey.vitalFew.filter((row) => !row.deleted_at).map((row) => row.payload as PlannerStore['vitalFew'][number])
+    base.weeklyReviews = rowsByKey.weeklyReviews.filter((row) => !row.deleted_at).map((row) => row.payload as PlannerStore['weeklyReviews'][number])
+    return base
+  } catch (error) {
+    console.warn('Structured sync load failed, falling back to planner_data snapshot.', error)
+    return snapshotStore
+  }
+}
+
+async function saveStructuredStoreToSupabase(userId: string, store: PlannerStore): Promise<void> {
+  if (!supabase || !STRUCTURED_SYNC_ENABLED) return
+
+  const now = new Date().toISOString()
+  const structuredClient = supabase as unknown as StructuredSupabaseClient
+
+  await Promise.all(
+    STRUCTURED_KEYS.map(async (key) => {
+      const tableName = STRUCTURED_TABLES[key]
+      const items = (store[key] as unknown[]).map((item) => ({
+        id: getStructuredRowId(key, item),
+        user_id: userId,
+        payload: item,
+        created_at: getStructuredCreatedAt(item, now),
+        updated_at: getStructuredUpdatedAt(item),
+        deleted_at: null,
+      }))
+
+      const { data: existingRows, error: selectError } = await structuredClient
+        .from(tableName)
+        .select('id')
+        .eq('user_id', userId)
+
+      if (selectError) throw new Error(selectError.message)
+
+      if (items.length > 0) {
+        const { error: upsertError } = await structuredClient
+          .from(tableName)
+          .upsert(items, { onConflict: 'user_id,id' })
+
+        if (upsertError) throw new Error(upsertError.message)
+      }
+
+      const activeIds = new Set(items.map((item) => item.id))
+      const idsToSoftDelete = ((existingRows ?? []) as Array<{ id: string }>)
+        .map((row) => row.id)
+        .filter((id) => !activeIds.has(id))
+
+      if (idsToSoftDelete.length > 0) {
+        const { error: deleteError } = await structuredClient
+          .from(tableName)
+          .update({ deleted_at: now, updated_at: now })
+          .eq('user_id', userId)
+          .in('id', idsToSoftDelete)
+
+        if (deleteError) throw new Error(deleteError.message)
+      }
+    }),
+  )
+}
+
 // ─── Read / Write ─────────────────────────────────────────────────────────────
 
 export function loadStore(): PlannerStore {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultStore()
-    return { ...defaultStore(), ...JSON.parse(raw) }
+    return normalizeStore(JSON.parse(raw) as Partial<PlannerStore>)
   } catch {
     return defaultStore()
   }
 }
 
 export function saveStore(store: PlannerStore): void {
+  warnIfStoreLarge(store)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(store))
 }
 
@@ -83,10 +253,17 @@ export async function loadStoreFromSupabaseWithMeta(userId: string): Promise<Sup
     .select('store, updated_at')
     .eq('user_id', userId)
     .single()
-  if (error || !data?.store) return null
+
+  const snapshotStore = !error && data?.store
+    ? normalizeStore(data.store as Partial<PlannerStore>)
+    : null
+
+  const store = await loadStructuredStoreFromSupabase(userId, snapshotStore)
+  if (!store) return null
+
   return {
-    store: { ...defaultStore(), ...(data.store as Partial<PlannerStore>) },
-    updatedAt: (data.updated_at as string) ?? null,
+    store,
+    updatedAt: (data?.updated_at as string | undefined) ?? null,
   }
 }
 
@@ -101,6 +278,11 @@ export async function saveStoreToSupabase(userId: string, store: PlannerStore): 
       { user_id: userId, store, updated_at: new Date().toISOString() },
       { onConflict: 'user_id' }
     )
+  try {
+    await saveStructuredStoreToSupabase(userId, store)
+  } catch (e) {
+    console.warn('Structured sync write failed (blob save succeeded):', e)
+  }
 }
 
 /**
@@ -140,332 +322,12 @@ export async function saveStoreToSupabaseChecked(
     )
 
   if (error) return { ok: false, error: error.message }
+  try {
+    await saveStructuredStoreToSupabase(userId, store)
+  } catch (e) {
+    console.warn('Structured sync write failed (blob save succeeded):', e)
+  }
   return { ok: true }
-}
-
-// ─── Event CRUD ───────────────────────────────────────────────────────────────
-
-export function createEvent(
-  store: PlannerStore,
-  event: Omit<PlannerStore['events'][0], 'id' | 'createdAt' | 'updatedAt'>
-): PlannerStore {
-  const now = new Date().toISOString()
-  return {
-    ...store,
-    events: [...store.events, { ...event, id: crypto.randomUUID(), createdAt: now, updatedAt: now }],
-  }
-}
-
-export function bulkCreateEvents(
-  store: PlannerStore,
-  events: Array<Omit<PlannerStore['events'][0], 'id' | 'createdAt' | 'updatedAt'>>
-): PlannerStore {
-  const now = new Date().toISOString()
-  return {
-    ...store,
-    events: [
-      ...store.events,
-      ...events.map((event) => ({
-        ...event,
-        id: crypto.randomUUID(),
-        createdAt: now,
-        updatedAt: now,
-      })),
-    ],
-  }
-}
-
-export function updateEvent(
-  store: PlannerStore,
-  id: string,
-  patch: Partial<PlannerStore['events'][0]>
-): PlannerStore {
-  return {
-    ...store,
-    events: store.events.map((e) =>
-      e.id === id ? { ...e, ...patch, updatedAt: new Date().toISOString() } : e
-    ),
-  }
-}
-
-export function deleteEvent(store: PlannerStore, id: string): PlannerStore {
-  return { ...store, events: store.events.filter((e) => e.id !== id) }
-}
-
-/** Save overrides for a single occurrence of a recurring event. */
-export function updateEventInstance(
-  store: PlannerStore,
-  baseId: string,
-  dateStr: string,
-  patch: { title?: string; category?: string; notes?: string; startTime?: string; endTime?: string }
-): PlannerStore {
-  return {
-    ...store,
-    events: store.events.map((e) =>
-      e.id === baseId
-        ? {
-            ...e,
-            instanceOverrides: {
-              ...e.instanceOverrides,
-              [dateStr]: { ...e.instanceOverrides?.[dateStr], ...patch },
-            },
-            updatedAt: new Date().toISOString(),
-          }
-        : e
-    ),
-  }
-}
-
-/** Suppress a single occurrence of a recurring event on a specific date. */
-export function deleteEventOccurrence(
-  store: PlannerStore,
-  baseId: string,
-  dateStr: string
-): PlannerStore {
-  return {
-    ...store,
-    events: store.events.map((e) =>
-      e.id === baseId
-        ? {
-            ...e,
-            deletedDates: [...(e.deletedDates ?? []), dateStr],
-            updatedAt: new Date().toISOString(),
-          }
-        : e
-    ),
-  }
-}
-
-export function updateMonthMeta(
-  store: PlannerStore,
-  month: number,
-  year: number,
-  patch: Partial<MonthMeta>
-): PlannerStore {
-  return {
-    ...store,
-    monthMeta: store.monthMeta.map((m) =>
-      m.month === month && m.year === year ? { ...m, ...patch } : m
-    ),
-  }
-}
-
-// ─── Goal CRUD ────────────────────────────────────────────────────────────────
-
-export function createGoal(
-  store: PlannerStore,
-  goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt' | 'milestones'>
-): PlannerStore {
-  const now = new Date().toISOString()
-  return {
-    ...store,
-    goals: [...store.goals, { ...goal, id: crypto.randomUUID(), milestones: [], createdAt: now, updatedAt: now }],
-  }
-}
-
-export function updateGoal(store: PlannerStore, id: string, patch: Partial<Goal>): PlannerStore {
-  return {
-    ...store,
-    goals: store.goals.map((g) =>
-      g.id === id ? { ...g, ...patch, updatedAt: new Date().toISOString() } : g
-    ),
-  }
-}
-
-export function deleteGoal(store: PlannerStore, id: string): PlannerStore {
-  return { ...store, goals: store.goals.filter((g) => g.id !== id) }
-}
-
-export function addMilestone(
-  store: PlannerStore,
-  goalId: string,
-  milestone: Omit<Milestone, 'id' | 'goalId' | 'createdAt'>
-): PlannerStore {
-  const now = new Date().toISOString()
-  const newMilestone: Milestone = { ...milestone, id: crypto.randomUUID(), goalId, createdAt: now }
-  return {
-    ...store,
-    goals: store.goals.map((g) =>
-      g.id === goalId ? { ...g, milestones: [...g.milestones, newMilestone] } : g
-    ),
-  }
-}
-
-export function updateMilestone(
-  store: PlannerStore,
-  goalId: string,
-  milestoneId: string,
-  patch: Partial<Milestone>
-): PlannerStore {
-  return {
-    ...store,
-    goals: store.goals.map((g) =>
-      g.id === goalId
-        ? { ...g, milestones: g.milestones.map((m) => (m.id === milestoneId ? { ...m, ...patch } : m)) }
-        : g
-    ),
-  }
-}
-
-export function deleteMilestone(store: PlannerStore, goalId: string, milestoneId: string): PlannerStore {
-  return {
-    ...store,
-    goals: store.goals.map((g) =>
-      g.id === goalId ? { ...g, milestones: g.milestones.filter((m) => m.id !== milestoneId) } : g
-    ),
-  }
-}
-
-// ─── Task CRUD ────────────────────────────────────────────────────────────────
-
-export function createTask(
-  store: PlannerStore,
-  task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>
-): PlannerStore {
-  const now = new Date().toISOString()
-  return {
-    ...store,
-    tasks: [...store.tasks, { ...task, id: crypto.randomUUID(), createdAt: now, updatedAt: now }],
-  }
-}
-
-export function updateTask(store: PlannerStore, id: string, patch: Partial<Task>): PlannerStore {
-  return {
-    ...store,
-    tasks: store.tasks.map((t) =>
-      t.id === id ? { ...t, ...patch, updatedAt: new Date().toISOString() } : t
-    ),
-  }
-}
-
-export function deleteTask(store: PlannerStore, id: string): PlannerStore {
-  return { ...store, tasks: store.tasks.filter((t) => t.id !== id) }
-}
-
-// ─── Note CRUD ────────────────────────────────────────────────────────────────
-
-export function createNote(
-  store: PlannerStore,
-  note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>
-): PlannerStore {
-  const now = new Date().toISOString()
-  return {
-    ...store,
-    notes: [...store.notes, { ...note, id: crypto.randomUUID(), createdAt: now, updatedAt: now }],
-  }
-}
-
-export function updateNote(store: PlannerStore, id: string, patch: Partial<Note>): PlannerStore {
-  return {
-    ...store,
-    notes: store.notes.map((n) =>
-      n.id === id ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n
-    ),
-  }
-}
-
-export function deleteNote(store: PlannerStore, id: string): PlannerStore {
-  return { ...store, notes: store.notes.filter((n) => n.id !== id) }
-}
-
-// ─── Query helpers ────────────────────────────────────────────────────────────
-
-export function getEventsForDate(
-  store: PlannerStore,
-  date: Date
-): PlannerStore['events'] {
-  const key = format(date, 'yyyy-MM-dd')
-  return store.events.filter((e) => e.date === key)
-}
-
-export function getTasksForPeriod(
-  store: PlannerStore,
-  periodRef: string,
-  type: 'day' | 'week' | 'month'
-): Task[] {
-  if (type === 'day') return store.tasks.filter((t) => t.period === 'day' && t.date === periodRef)
-  if (type === 'week') return store.tasks.filter((t) => t.period === 'week' && t.week === periodRef)
-  const [year, month] = periodRef.split('-').map(Number)
-  return store.tasks.filter((t) => t.period === 'month' && t.month === month && t.year === year)
-}
-
-export function getGoalsByQuarter(store: PlannerStore, quarter: 1 | 2 | 3 | 4, year: number): Goal[] {
-  return store.goals.filter((g) => g.year === year && g.quarter === quarter)
-}
-
-export function getNotesByPeriod(store: PlannerStore, periodRef: string, type: Note['periodType']): Note[] {
-  return store.notes.filter((n) => n.periodType === type && n.periodRef === periodRef)
-}
-
-// ─── Category CRUD ────────────────────────────────────────────────────────────
-
-export function addCategory(store: PlannerStore, cat: Omit<EventCategoryDef, 'id'>): PlannerStore {
-  const id = `cat_${Date.now()}`
-  return { ...store, categories: [...store.categories, { id, ...cat }] }
-}
-
-export function updateCategory(store: PlannerStore, id: string, patch: Partial<EventCategoryDef>): PlannerStore {
-  return {
-    ...store,
-    categories: store.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-  }
-}
-
-export function removeCategory(store: PlannerStore, id: string): PlannerStore {
-  return { ...store, categories: store.categories.filter((c) => c.id !== id) }
-}
-
-/** Restore built-in defaults, preserving their original static IDs so existing events resolve correctly. */
-export function resetCategories(store: PlannerStore): PlannerStore {
-  return { ...store, categories: DEFAULT_CATEGORIES }
-}
-
-// ─── VitalFew CRUD ─────────────────────────────────────────────────────────────
-
-export function createVitalFew(
-  store: PlannerStore,
-  item: Omit<VitalFew, 'id' | 'createdAt' | 'updatedAt'>
-): PlannerStore {
-  const now = new Date().toISOString()
-  return {
-    ...store,
-    vitalFew: [...(store.vitalFew ?? []), { ...item, id: crypto.randomUUID(), createdAt: now, updatedAt: now }],
-  }
-}
-
-export function updateVitalFew(store: PlannerStore, id: string, patch: Partial<VitalFew>): PlannerStore {
-  return {
-    ...store,
-    vitalFew: (store.vitalFew ?? []).map((v) =>
-      v.id === id ? { ...v, ...patch, updatedAt: new Date().toISOString() } : v
-    ),
-  }
-}
-
-export function deleteVitalFew(store: PlannerStore, id: string): PlannerStore {
-  return { ...store, vitalFew: (store.vitalFew ?? []).filter((v) => v.id !== id) }
-}
-
-// ─── WeeklyReview CRUD ─────────────────────────────────────────────────────────
-
-export function createWeeklyReview(
-  store: PlannerStore,
-  item: Omit<WeeklyReview, 'id' | 'createdAt' | 'updatedAt'>
-): PlannerStore {
-  const now = new Date().toISOString()
-  return {
-    ...store,
-    weeklyReviews: [...(store.weeklyReviews ?? []), { ...item, id: crypto.randomUUID(), createdAt: now, updatedAt: now }],
-  }
-}
-
-export function updateWeeklyReview(store: PlannerStore, id: string, patch: Partial<WeeklyReview>): PlannerStore {
-  return {
-    ...store,
-    weeklyReviews: (store.weeklyReviews ?? []).map((r) =>
-      r.id === id ? { ...r, ...patch, updatedAt: new Date().toISOString() } : r
-    ),
-  }
 }
 
 // ─── Export helpers ───────────────────────────────────────────────────────────
