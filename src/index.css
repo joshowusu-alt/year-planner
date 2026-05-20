@@ -100,9 +100,11 @@ html {
      hide the app shell and show the print layout.
      Without the class, normal app prints work as before.
   ─────────────────────────────────────────────────────────────────── */
-  /* Reset body/html background so the dark theme doesn't bleed through */
+  /* Reset body/html so height:100% + overflow-x:hidden don't clip to 1 page */
   body.stratum-export-mode,
   html:has(body.stratum-export-mode) {
+    height: auto !important;
+    overflow: visible !important;
     background-color: white !important;
     background: white !important;
   }
