@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, type FormEvent } from 'react'
-import { X, Trash2, Save, RotateCcw, ChevronDown, Clock, Bell, AlertTriangle } from 'lucide-react'
+import { X, Trash2, Save, RotateCcw, ChevronDown, Clock, Bell, AlertTriangle, Globe } from 'lucide-react'
 import { canShowNotifications } from '../../lib/notifications'
 import type { PlannerEvent, RecurrenceRule, RecurrenceType } from '../../types'
 import { RECURRENCE_LABELS, getBaseEventId } from '../../types'
@@ -21,6 +21,7 @@ interface Props {
     startTime?: string
     endTime?: string
     reminder?: number | null
+    timezone?: string
   }) => void
   onDelete?: (id: string) => void
   onClose: () => void
@@ -47,6 +48,9 @@ export function EventModal({ event, defaultDate, defaultStartTime, onSave, onDel
   )
   const [recurrenceUntil, setRecurrenceUntil] = useState(event?.recurrence?.until ?? '')
   const [showAllCategories, setShowAllCategories] = useState(false)
+  const [timezone, setTimezone] = useState<string>(
+    event?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  )
   // When editing a virtual occurrence: 'this' = only this date, 'all' = all occurrences
   const [scope, setScope] = useState<'this' | 'all'>(event?.id.includes('__') ? 'this' : 'all')
 
@@ -96,7 +100,7 @@ export function EventModal({ event, defaultDate, defaultStartTime, onSave, onDel
       recurrenceType !== 'none'
         ? { type: recurrenceType, until: recurrenceUntil || undefined }
         : undefined
-    onSave({ date, title: title.trim(), category, notes: notes.trim() || undefined, recurrence, startTime: startTime || undefined, endTime: endTime || undefined, reminder: (showTime && startTime) ? reminder : null })
+    onSave({ date, title: title.trim(), category, notes: notes.trim() || undefined, recurrence, startTime: startTime || undefined, endTime: endTime || undefined, reminder: (showTime && startTime) ? reminder : null, timezone: showTime ? timezone : undefined })
     onClose()
   }
 
@@ -358,6 +362,28 @@ export function EventModal({ event, defaultDate, defaultStartTime, onSave, onDel
                     Notifications not enabled — go to Settings to allow them.
                   </p>
                 )}
+              </div>
+            )}
+            {showTime && (
+              <div className="mt-3">
+                <label className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+                  <Globe size={11} />
+                  Timezone
+                </label>
+                <input
+                  list="tz-list"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+                  placeholder="e.g. Europe/London"
+                />
+                <datalist id="tz-list">
+                  {(typeof Intl.supportedValuesOf === 'function'
+                    ? Intl.supportedValuesOf('timeZone')
+                    : ['UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney']
+                  ).map((tz) => <option key={tz} value={tz} />)}
+                </datalist>
               </div>
             )}
           </div>

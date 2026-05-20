@@ -65,6 +65,7 @@ STRATUM is a planning app for yearly strategy, monthly themes, weekly execution,
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_VAPID_PUBLIC_KEY=
+VITE_USE_STRUCTURED_SYNC=false
 ```
 
 If Supabase keys are omitted, the app falls back to local storage and signs in as a local guest.
@@ -76,21 +77,35 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
+CRON_SECRET=
 ```
+
+`CRON_SECRET` should always be set in production. The reminder endpoint now returns `500` if it is missing and `401` if the bearer token or `?secret=` value does not match.
 
 ## Supabase setup
 
 The repository includes SQL helpers for optional backend features:
 
+- `src/lib/planner_data_migration.sql`
 - `src/lib/push_subscriptions_migration.sql`
 - `src/lib/sharing_migration.sql`
+- `src/lib/structured_sync_migration.sql`
 
-Run them in the Supabase SQL editor if you want push reminders and share links.
+Recommended order:
+
+1. Run `src/lib/planner_data_migration.sql` for the base planner, sharing, and push tables.
+2. Run `src/lib/structured_sync_migration.sql` only when you are ready to turn on `VITE_USE_STRUCTURED_SYNC`.
+
+All of these migration files are written to be rerunnable.
 
 ## Notifications and reminders
 
 - In-app reminders work while STRATUM is open in the browser.
-- Background push requires Supabase, a configured VAPID keypair, and a cron job that calls `/api/send-reminders`.
+- Background push requires Supabase, a configured VAPID keypair, and an external scheduler that calls `/api/send-reminders`.
+- Vercel Hobby plans do not support sub-daily cron schedules, so this repository uses an external 5-minute scheduler instead of Vercel Cron.
+- A GitHub Actions workflow is included at `.github/workflows/reminder-cron.yml`. Set `CRON_SECRET` as a GitHub Actions secret to enable it.
+- `REMINDER_URL` is optional; if omitted, the workflow uses the current production alias `https://planner-app-azure.vercel.app/api/send-reminders`.
+- If you use another external cron service instead, call `POST /api/send-reminders` with `Authorization: Bearer <CRON_SECRET>`.
 - Share links are read-only and expire after 90 days.
 
 ## Import and export workflows

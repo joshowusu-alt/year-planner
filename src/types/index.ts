@@ -224,6 +224,7 @@ export interface WeeklyReview {
 // ─── Planner Store ───────────────────────────────────────────────────────────
 
 export interface PlannerStore {
+  schemaVersion: number
   events: PlannerEvent[]
   monthMeta: MonthMeta[]
   goals: Goal[]
@@ -278,3 +279,4 @@ export const MONTH_SHORT = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ]
+

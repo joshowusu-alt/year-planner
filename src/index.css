@@ -151,8 +151,8 @@ html {
   }
 
   @page {
-    size: A4 portrait;
-    margin: 12mm 14mm;
+    size: A4 landscape;
+    margin: 8mm;
   }
 }
 

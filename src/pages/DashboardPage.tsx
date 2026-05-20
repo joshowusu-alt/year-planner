@@ -5,7 +5,7 @@ import { usePlanner } from '../context/PlannerContext'
 import { GOAL_STATUS_LABELS, getCategoryStyle } from '../types'
 import type { GoalStatus, PriorityLevel } from '../types'
 
-// ─── Stat card ──────────────────────────────────────────────────────────────────
+// ─── Stat card ────────────────────────────────────────────────────────────────
 
 function StatCard({ icon: Icon, label, value, sub, color }: {
   icon: React.ElementType
@@ -34,7 +34,7 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
   )
 }
 
-// ─── Mini progress bar ───────────────────────────────────────────────────────────
+// ─── Mini progress bar ────────────────────────────────────────────────────────
 
 function Bar({ pct, color }: { pct: number; color: string }) {
   return (
@@ -58,7 +58,7 @@ const PRIORITY_COLORS: Record<PriorityLevel, string> = {
   low: '#94a3b8', medium: '#60a5fa', high: '#f97316', critical: '#ef4444',
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
   const { store, currentYear } = usePlanner()
@@ -66,7 +66,7 @@ export function DashboardPage() {
   const today = useMemo(() => new Date(), [])
   const todayStr = useMemo(() => format(today, 'yyyy-MM-dd'), [today])
 
-  // ── Goal stats ───────────────────────────────────────────────────────────────────
+  // ── Goal stats ──────────────────────────────────────────────────────────────
   const yearGoals = useMemo(
     () => store.goals.filter((g) => g.year === currentYear),
     [store.goals, currentYear],
@@ -83,7 +83,7 @@ export function DashboardPage() {
     return Math.round(yearGoals.reduce((sum, g) => sum + g.progress, 0) / yearGoals.length)
   }, [yearGoals])
 
-  // ── Task stats ───────────────────────────────────────────────────────────────────
+  // ── Task stats ──────────────────────────────────────────────────────────────
   const yearTasks = useMemo(
     () => store.tasks.filter((t) => t.year === currentYear),
     [store.tasks, currentYear],
@@ -108,7 +108,7 @@ export function DashboardPage() {
   )
   const weekTasksDone = useMemo(() => weekTasksAll.filter((t) => t.completed).length, [weekTasksAll])
 
-  // ── Events this month ───────────────────────────────────────────────────────────────
+  // ── Events this month ───────────────────────────────────────────────────────
   const monthStart = useMemo(() => startOfMonth(today), [today])
   const monthEnd   = useMemo(() => endOfMonth(today),   [today])
   const monthEvents = useMemo(
@@ -135,7 +135,7 @@ export function DashboardPage() {
     [eventsByCat],
   )
 
-  // ── Upcoming milestones ───────────────────────────────────────────────────────────────
+  // ── Upcoming milestones ─────────────────────────────────────────────────────
   const upcomingMilestones = useMemo(() => {
     return store.goals
       .flatMap((g) => g.milestones.map((m) => ({ ...m, goalTitle: g.title, goalColor: g.color })))
@@ -144,7 +144,7 @@ export function DashboardPage() {
       .slice(0, 6)
   }, [store.goals, todayStr])
 
-  // ── Year progress ───────────────────────────────────────────────────────────────────
+  // ── Year progress ───────────────────────────────────────────────────────────
   const yearProgress = useMemo(() => {
     const start = new Date(currentYear, 0, 1).getTime()
     const end   = new Date(currentYear + 1, 0, 1).getTime()

@@ -2,10 +2,11 @@
  * Monthly Calendar View
  * Full month grid with events, tasks, and notes dots per day
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState, type WheelEvent } from 'react'
 import { DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import {
+  addYears,
   format,
   startOfMonth,
   endOfMonth,
@@ -16,6 +17,7 @@ import {
   isToday,
   addMonths,
   subMonths,
+  subYears,
 } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
@@ -170,8 +172,9 @@ export function MonthlyCalendar() {
   const [editingEvent, setEditingEvent] = useState<PlannerEvent | null>(null)
   const [bottomSheetDate, setBottomSheetDate] = useState<string | null>(null)
   const [activeEventId, setActiveEventId] = useState<string | null>(null)
-  const { isMobile } = useBreakpoint()
+  const { isMobile, isDesktop } = useBreakpoint()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const wheelLockRef = useRef<number | null>(null)
 
   const viewDate = new Date(currentYear, currentMonth - 1, 1)
 
@@ -182,10 +185,43 @@ export function MonthlyCalendar() {
 
   const days = eachDayOfInterval({ start: calStart, end: calEnd })
 
+  useEffect(() => {
+    return () => {
+      if (wheelLockRef.current !== null) {
+        window.clearTimeout(wheelLockRef.current)
+      }
+    }
+  }, [])
+
+  function syncView(nextDate: Date) {
+    setCurrentMonth(nextDate.getMonth() + 1)
+    setCurrentYear(nextDate.getFullYear())
+  }
+
   function navigate(dir: -1 | 1) {
-    const newDate = dir === 1 ? addMonths(viewDate, 1) : subMonths(viewDate, 1)
-    setCurrentMonth(newDate.getMonth() + 1)
-    setCurrentYear(newDate.getFullYear())
+    syncView(dir === 1 ? addMonths(viewDate, 1) : subMonths(viewDate, 1))
+  }
+
+  function jumpToMonth(month: number) {
+    syncView(new Date(currentYear, month - 1, 1))
+  }
+
+  function jumpToYear(year: number) {
+    syncView(new Date(year, currentMonth - 1, 1))
+  }
+
+  function jumpToToday() {
+    const today = new Date()
+    syncView(new Date(today.getFullYear(), today.getMonth(), 1))
+  }
+
+  function handleDesktopWheel(event: WheelEvent<HTMLDivElement>) {
+    if (!isDesktop || Math.abs(event.deltaY) < 18 || wheelLockRef.current !== null) return
+    event.preventDefault()
+    navigate(event.deltaY > 0 ? 1 : -1)
+    wheelLockRef.current = window.setTimeout(() => {
+      wheelLockRef.current = null
+    }, 320)
   }
 
   function getEventsForDay(date: Date): PlannerEvent[] {
@@ -251,12 +287,13 @@ export function MonthlyCalendar() {
   const WEEKDAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
   const theme = store.monthMeta.find((m) => m.month === currentMonth && m.year === currentYear)?.theme
+  const yearOptions = [subYears(viewDate, 1).getFullYear(), currentYear, addYears(viewDate, 1).getFullYear()]
 
   return (
-    <div className="flex flex-col flex-1" style={{ background: '#0a0e1a' }}>
+    <div className="flex flex-col flex-1 min-h-0" style={{ background: '#0a0e1a' }} onWheel={handleDesktopWheel}>
       {/* Header */}
       <div
-        className="flex items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 no-print"
+        className="flex items-center gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 no-print flex-wrap"
         style={{ borderBottom: '1px solid #1e2d40' }}
       >
         <button onClick={() => navigate(-1)} aria-label="Previous month" title="Previous month" className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
@@ -280,6 +317,44 @@ export function MonthlyCalendar() {
 
         <div className="flex-1" />
 
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={currentMonth}
+            onChange={(event) => jumpToMonth(Number(event.target.value))}
+            aria-label="Jump to month"
+            className="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider focus:outline-none"
+            style={{ background: '#111827', color: '#e2e8f0', border: '1px solid #243447' }}
+          >
+            {MONTH_NAMES.map((name, index) => (
+              <option key={name} value={index + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={currentYear}
+            onChange={(event) => jumpToYear(Number(event.target.value))}
+            aria-label="Jump to year"
+            className="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider focus:outline-none"
+            style={{ background: '#111827', color: '#e2e8f0', border: '1px solid #243447' }}
+          >
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={jumpToToday}
+            className="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors hover:bg-white/5"
+            style={{ color: '#94a3b8', border: '1px solid #243447' }}
+          >
+            Today
+          </button>
+        </div>
+
         <button
           onClick={() => { setEditingEvent(null); setModalDate(format(new Date(), 'yyyy-MM-dd')) }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
@@ -290,8 +365,16 @@ export function MonthlyCalendar() {
         </button>
       </div>
 
+      {!isMobile && (
+        <div className="px-4 md:px-6 py-2 no-print" style={{ borderBottom: '1px solid #142033' }}>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+            Scroll to move month. Use jump controls for direct access to December or another year.
+          </p>
+        </div>
+      )}
+
       {/* Calendar grid */}
-      <div className="flex-1 overflow-auto p-2 md:p-4">
+      <div className="flex-1 min-h-0 overflow-auto p-2 md:p-4">
         {/* Weekday headers */}
         <div className="grid grid-cols-7">
           {WEEKDAY_HEADERS.map((d) => (

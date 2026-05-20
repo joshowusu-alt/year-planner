@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { usePlanner } from '../../context/PlannerContext'
 import type { VitalFew } from '../../types'
 
-// ─── Component ────────────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function VitalFewPanel() {
   const ctx = usePlanner()

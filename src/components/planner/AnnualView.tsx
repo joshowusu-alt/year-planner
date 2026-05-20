@@ -61,7 +61,7 @@ export function AnnualView() {
     return () => observer.disconnect()
   }, [currentYear, todayYear, todayMonth])
 
-  // ── Event handlers ────────────────────────────────────────────────────
+  // ── Event handlers ────────────────────────────────────────────────────────
   const handleSave = useCallback((data: {
     date: string
     title: string
@@ -70,12 +70,11 @@ export function AnnualView() {
     recurrence?: RecurrenceRule
     startTime?: string
     endTime?: string
-    reminder?: number | null
   }) => {
     if (editingEvent) {
       editEvent(editingEvent.id, data)
     } else {
-      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime, data.reminder)
+      addEvent(data.date, data.title, data.category, data.notes, data.recurrence, data.startTime, data.endTime)
     }
   }, [editingEvent, editEvent, addEvent])
 
@@ -99,7 +98,7 @@ export function AnnualView() {
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  // ── Print layout: also render a hidden quarterly print version ────────────────
+  // ── Print layout: also render a hidden quarterly print version ────────────
   const printOrgName = store.organizationName
   const printTitle = store.plannerTitle
 

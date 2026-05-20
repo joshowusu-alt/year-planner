@@ -5,6 +5,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      'react-router-dom': '/src/lib/routerDom.ts',
+    },
+  },
   build: {
     rollupOptions: {
       output: {
