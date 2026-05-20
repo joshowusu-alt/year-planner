@@ -6,22 +6,23 @@
  *
  * Layout: Cover page → 3-month calendar pages → Goals summary
  */
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 import { getDaysInMonth, getDay, format } from 'date-fns'
 import { usePlanner } from '../context/PlannerContext'
 import type { Goal, PlannerEvent, EventCategoryDef } from '../types'
 import {
   isRecurringOnDate,
   MONTH_NAMES,
+  MONTH_SHORT,
   getCategoryStyle,
   GOAL_STATUS_LABELS,
 } from '../types'
 
-// ─── Constants ───────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const DAY3 = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 
-// ─── Helpers ────────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function eventsOnDate(all: PlannerEvent[], dateStr: string): PlannerEvent[] {
   return all.filter((ev) => {
@@ -31,7 +32,7 @@ function eventsOnDate(all: PlannerEvent[], dateStr: string): PlannerEvent[] {
   })
 }
 
-// ─── Month section ────────────────────────────────────────────────────────────────
+// ─── Month section ────────────────────────────────────────────────────────────
 
 function MonthSection({
   year,
@@ -39,12 +40,14 @@ function MonthSection({
   events,
   categories,
   theme,
+  accentColor,
 }: {
   year: number
   month: number
   events: PlannerEvent[]
   categories: EventCategoryDef[]
   theme?: string
+  accentColor: string
 }) {
   const days = getDaysInMonth(new Date(year, month - 1, 1))
 
@@ -71,7 +74,7 @@ function MonthSection({
       >
         <span
           style={{
-            color: '#d4af37',
+            color: accentColor,
             fontWeight: 900,
             fontSize: 9.5,
             letterSpacing: '0.12em',
@@ -211,7 +214,7 @@ function MonthSection({
   )
 }
 
-// ─── Goal row ───────────────────────────────────────────────────────────────────
+// ─── Goal row ─────────────────────────────────────────────────────────────────
 
 function GoalRow({ goal }: { goal: Goal }) {
   const done = goal.milestones.filter((ms) => ms.completed).length
@@ -315,16 +318,16 @@ function GoalRow({ goal }: { goal: Goal }) {
   )
 }
 
-// ─── Page chrome helpers ──────────────────────────────────────────────────────────
+// ─── Page chrome helpers ──────────────────────────────────────────────────────
 
-function PageHeader({ right }: { right: string }) {
+function PageHeader({ right, accentColor }: { right: string; accentColor: string }) {
   return (
     <div
       style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderBottom: '1.5px solid #d4af37',
+        borderBottom: `1.5px solid ${accentColor}`,
         paddingBottom: 5,
         marginBottom: 10,
       }}
@@ -333,7 +336,7 @@ function PageHeader({ right }: { right: string }) {
         style={{
           fontSize: 7.5,
           fontWeight: 900,
-          color: '#d4af37',
+          color: accentColor,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
         }}
@@ -347,7 +350,7 @@ function PageHeader({ right }: { right: string }) {
   )
 }
 
-function PageFooter({ right }: { right: string }) {
+function PageFooter({ right, accentColor }: { right: string; accentColor: string }) {
   return (
     <div
       style={{
@@ -362,7 +365,7 @@ function PageFooter({ right }: { right: string }) {
       <span
         style={{
           fontSize: 5.5,
-          color: '#cbd5e1',
+          color: accentColor,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
         }}
@@ -374,7 +377,7 @@ function PageFooter({ right }: { right: string }) {
   )
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 
 interface Props {
   year: number
@@ -384,14 +387,18 @@ interface Props {
 export function PrintLayout({ year, months }: Props) {
   const { store } = usePlanner()
 
-  // Set body class so @media print CSS knows to hide #app-shell and show this layout
-  useEffect(() => {
+  // Set body class so @media print CSS knows to hide #root and show this layout.
+  // useLayoutEffect fires synchronously before paint, ensuring the class is
+  // present before window.print() fires.
+  useLayoutEffect(() => {
     document.body.classList.add('stratum-export-mode')
     return () => document.body.classList.remove('stratum-export-mode')
   }, [])
 
   const today = format(new Date(), 'd MMMM yyyy')
   const orgName = store.organizationName || 'STRATUM'
+  const reportTitle = store.plannerTitle || 'Executive Planning System'
+  const accentColor = store.accentColor || '#d4af37'
   const firstMonthName = MONTH_NAMES[months[0] - 1]
   const lastMonthName  = MONTH_NAMES[months[months.length - 1] - 1]
   const coverage =
@@ -402,14 +409,21 @@ export function PrintLayout({ year, months }: Props) {
       : `${firstMonthName} – ${lastMonthName} ${year}`
 
   const yearGoals = store.goals.filter((g) => g.year === year)
+  const selectedThemes = months
+    .map((month) => ({
+      month,
+      theme: store.monthMeta.find((meta) => meta.month === month && meta.year === year)?.theme?.trim() ?? '',
+    }))
+    .filter((entry) => entry.theme)
 
   // Group months into pages of 3
   const monthGroups: number[][] = []
   for (let i = 0; i < months.length; i += 3) {
     monthGroups.push(months.slice(i, i + 3))
   }
+  const totalPages = 1 + monthGroups.length + (yearGoals.length > 0 ? 1 : 0)
 
-  return (
+  const content = (
     <div
       id="stratum-print-layout"
       style={{
@@ -420,7 +434,7 @@ export function PrintLayout({ year, months }: Props) {
         background: 'white',
       }}
     >
-      {/* ── Cover page ────────────────────────────────────────────────────────────────── */}
+      {/* ── Cover page ─────────────────────────────────────────────────── */}
       <div
         style={{
           pageBreakAfter: 'always',
@@ -428,153 +442,368 @@ export function PrintLayout({ year, months }: Props) {
           flexDirection: 'column',
           position: 'relative',
           minHeight: '270mm',
+          background: 'white',
         }}
       >
-        {/* Top gold bar */}
-        <div style={{ height: 8, background: '#d4af37', flexShrink: 0 }} />
-
-        {/* Content area */}
         <div
           style={{
             flex: 1,
-            padding: '24px 28px',
+            padding: '16px 18px 14px',
             display: 'flex',
             flexDirection: 'column',
+            gap: 12,
           }}
         >
-          {/* Logo */}
-          <div>
-            <div
-              style={{
-                fontSize: 34,
-                fontWeight: 900,
-                letterSpacing: '0.16em',
-                color: '#d4af37',
-                lineHeight: 1,
-              }}
-            >
-              STRATUM
-            </div>
-            <div
-              style={{
-                fontSize: 8.5,
-                fontWeight: 500,
-                color: '#64748b',
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-                marginTop: 5,
-              }}
-            >
-              {orgName !== 'STRATUM' ? `${orgName} · ` : ''}Executive Planning System
-            </div>
-          </div>
-
-          {/* Gradient divider */}
           <div
             style={{
-              height: 2,
-              margin: '22px 0',
-              background: 'linear-gradient(90deg, #d4af37 0%, rgba(212,175,55,0.08) 100%)',
-              borderRadius: 1,
-            }}
-          />
-
-          {/* Year */}
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              padding: '24px 0',
+              background: '#0a0e1a',
+              borderRadius: 18,
+              padding: '22px 24px 20px',
+              position: 'relative',
+              overflow: 'hidden',
             }}
           >
             <div
               style={{
-                fontSize: 96,
-                fontWeight: 900,
-                color: '#0a0e1a',
-                lineHeight: 1,
-                letterSpacing: '0.04em',
+                position: 'absolute',
+                inset: 0,
+                background: `radial-gradient(circle at top right, ${accentColor}2e 0%, transparent 36%)`,
               }}
-            >
-              {year}
+            />
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+              <div>
+                <div
+                  style={{
+                    fontSize: 8,
+                    fontWeight: 900,
+                    letterSpacing: '0.22em',
+                    color: accentColor,
+                    textTransform: 'uppercase',
+                    marginBottom: 10,
+                  }}
+                >
+                  STRATUM Export Report
+                </div>
+                <div
+                  style={{
+                    fontSize: 26,
+                    fontWeight: 900,
+                    color: 'white',
+                    lineHeight: 1.05,
+                    maxWidth: 340,
+                  }}
+                >
+                  {orgName}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: '#cbd5e1',
+                    marginTop: 8,
+                    maxWidth: 360,
+                  }}
+                >
+                  {reportTitle}
+                </div>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    marginTop: 18,
+                    padding: '7px 12px',
+                    borderRadius: 999,
+                    border: `1px solid ${accentColor}44`,
+                    color: '#f8fafc',
+                    fontSize: 8,
+                    fontWeight: 700,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {coverage}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 120 }}>
+                {[
+                  ['Generated', today],
+                  ['Pages', `${totalPages}`],
+                  ['Goal summary', yearGoals.length > 0 ? 'Included' : 'Skipped'],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    style={{
+                      background: 'rgba(15, 23, 42, 0.82)',
+                      border: '1px solid rgba(148, 163, 184, 0.14)',
+                      borderRadius: 12,
+                      padding: '10px 12px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 6,
+                        fontWeight: 900,
+                        letterSpacing: '0.16em',
+                        textTransform: 'uppercase',
+                        color: '#64748b',
+                        marginBottom: 3,
+                      }}
+                    >
+                      {label}
+                    </div>
+                    <div style={{ fontSize: 8, fontWeight: 700, color: 'white' }}>{value}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: '#475569',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                marginTop: 12,
-                fontWeight: 600,
-              }}
-            >
-              Annual Planner Report
+
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 14, marginTop: 22 }}>
+              <div
+                style={{
+                  fontSize: 88,
+                  fontWeight: 900,
+                  color: 'white',
+                  lineHeight: 0.9,
+                  letterSpacing: '0.03em',
+                }}
+              >
+                {year}
+              </div>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: '#cbd5e1',
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  paddingBottom: 12,
+                }}
+              >
+                Planning overview
+              </div>
             </div>
           </div>
 
-          {/* Centre divider */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
+            {[
+              ['Months', `${months.length}`],
+              ['Calendar pages', `${monthGroups.length}`],
+              ['Goals', `${yearGoals.length}`],
+              ['Themes', `${selectedThemes.length}`],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                style={{
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 14,
+                  padding: '12px 14px',
+                  background: '#fff',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 6,
+                    fontWeight: 900,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    color: '#94a3b8',
+                    marginBottom: 5,
+                  }}
+                >
+                  {label}
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#0f172a' }}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 10 }}>
+            <div
+              style={{
+                border: '1px solid #e2e8f0',
+                borderRadius: 16,
+                padding: '14px 16px',
+                background: '#fff',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 6.5,
+                  fontWeight: 900,
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  color: '#94a3b8',
+                  marginBottom: 10,
+                }}
+              >
+                Selected months
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {months.map((month) => (
+                  <span
+                    key={month}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 999,
+                      background: `${accentColor}14`,
+                      border: `1px solid ${accentColor}28`,
+                      color: '#0f172a',
+                      fontSize: 7,
+                      fontWeight: 800,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {MONTH_SHORT[month - 1]}
+                  </span>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 6.5,
+                  fontWeight: 900,
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  color: '#94a3b8',
+                  marginTop: 14,
+                  marginBottom: 10,
+                }}
+              >
+                Strategy themes
+              </div>
+              {selectedThemes.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {selectedThemes.map(({ month, theme }) => (
+                    <span
+                      key={`${month}-${theme}`}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: 999,
+                        background: '#fff7ed',
+                        border: '1px solid #fed7aa',
+                        color: '#9a3412',
+                        fontSize: 6.8,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {MONTH_SHORT[month - 1]} · {theme}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 7, color: '#94a3b8' }}>No month themes set for this range.</div>
+              )}
+            </div>
+
+            <div
+              style={{
+                border: '1px solid #e2e8f0',
+                borderRadius: 16,
+                padding: '14px 16px',
+                background: '#fff',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 6.5,
+                  fontWeight: 900,
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  color: '#94a3b8',
+                  marginBottom: 10,
+                }}
+              >
+                Document contents
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  ['01', 'Cover page', 'Report identity, coverage, and key metrics'],
+                  ['02', `${monthGroups.length} calendar page${monthGroups.length === 1 ? '' : 's'}`, 'Three months per page with event summaries'],
+                  ['03', yearGoals.length > 0 ? 'Goal summary' : 'Goal summary omitted', yearGoals.length > 0 ? `${yearGoals.length} year goal entries included` : 'No goals recorded for this year'],
+                ].map(([step, label, text]) => (
+                  <div key={step} style={{ display: 'flex', gap: 10 }}>
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 999,
+                        background: `${accentColor}14`,
+                        color: accentColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 6.5,
+                        fontWeight: 900,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {step}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 7.5, fontWeight: 800, color: '#0f172a', marginBottom: 2 }}>{label}</div>
+                      <div style={{ fontSize: 6.8, color: '#64748b', lineHeight: 1.45 }}>{text}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div
             style={{
-              height: 2,
-              margin: '0 0 28px',
-              background:
-                'linear-gradient(90deg, transparent 0%, #d4af37 50%, transparent 100%)',
-              borderRadius: 1,
+              border: '1px solid #e2e8f0',
+              borderRadius: 16,
+              padding: '14px 16px',
+              background: '#fff',
             }}
-          />
-
-          {/* Metadata */}
-          <table style={{ borderCollapse: 'collapse', margin: '0 4px' }}>
-            <tbody>
-              {(
-                [
-                  ['Organisation', orgName],
-                  ['Report Date', today],
-                  ['Coverage', coverage],
-                  ['Goals Tracked', `${yearGoals.length}`],
-                ] as [string, string][]
-              ).map(([label, value]) => (
-                <tr key={label}>
-                  <td
-                    style={{
-                      fontSize: 7,
-                      color: '#94a3b8',
-                      fontWeight: 700,
-                      letterSpacing: '0.12em',
-                      textTransform: 'uppercase',
-                      paddingRight: 16,
-                      paddingBottom: 6,
-                      verticalAlign: 'baseline',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {label}
-                  </td>
-                  <td
-                    style={{
-                      fontSize: 9,
-                      color: '#1e293b',
-                      fontWeight: 500,
-                      paddingBottom: 6,
-                    }}
-                  >
-                    {value}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          >
+            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <tbody>
+                {(
+                  [
+                    ['Organisation', orgName],
+                    ['Report title', reportTitle],
+                    ['Coverage', coverage],
+                    ['Generated', today],
+                  ] as [string, string][]
+                ).map(([label, value]) => (
+                  <tr key={label}>
+                    <td
+                      style={{
+                        fontSize: 7,
+                        color: '#94a3b8',
+                        fontWeight: 700,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        paddingRight: 16,
+                        paddingBottom: 6,
+                        verticalAlign: 'baseline',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {label}
+                    </td>
+                    <td
+                      style={{
+                        fontSize: 9,
+                        color: '#1e293b',
+                        fontWeight: 500,
+                        paddingBottom: 6,
+                      }}
+                    >
+                      {value}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Bottom gold bar */}
-        <div style={{ height: 5, background: '#d4af37', flexShrink: 0 }} />
+        <div style={{ height: 4, background: accentColor, flexShrink: 0, margin: '0 18px 14px', borderRadius: 999 }} />
       </div>
 
-      {/* ── Calendar pages — 3 months each ────────────────────────────────────── */}
+      {/* ── Calendar pages — 3 months each ──────────────────────────── */}
       {monthGroups.map((group, gi) => {
         const isLastPage = gi === monthGroups.length - 1 && yearGoals.length === 0
         return (
@@ -589,6 +818,7 @@ export function PrintLayout({ year, months }: Props) {
             }}
           >
             <PageHeader
+              accentColor={accentColor}
               right={`${group.map((m) => MONTH_NAMES[m - 1]).join(' · ')}  ${year}`}
             />
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 10 }}>
@@ -599,21 +829,22 @@ export function PrintLayout({ year, months }: Props) {
                   month={m}
                   events={store.events}
                   categories={store.categories}
+                  accentColor={accentColor}
                   theme={
                     store.monthMeta.find((mt) => mt.month === m && mt.year === year)?.theme
                   }
                 />
               ))}
             </div>
-            <PageFooter right={`${year} · Page ${gi + 2}`} />
+            <PageFooter accentColor={accentColor} right={`${year} · Page ${gi + 2}`} />
           </div>
         )
       })}
 
-      {/* ── Goals summary page ───────────────────────────────────────────────────────── */}
+      {/* ── Goals summary page ──────────────────────────────────────────── */}
       {yearGoals.length > 0 && (
         <div style={{ padding: '14px 14px 10px' }}>
-          <PageHeader right={`Goals · ${year}`} />
+          <PageHeader accentColor={accentColor} right={`Goals · ${year}`} />
           <div
             style={{
               fontSize: 14,
@@ -647,7 +878,7 @@ export function PrintLayout({ year, months }: Props) {
                       textAlign: 'left',
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
-                      borderBottom: '2px solid #d4af37',
+                      borderBottom: `2px solid ${accentColor}`,
                       width: w === 'auto' ? undefined : w,
                     }}
                   >
@@ -662,9 +893,11 @@ export function PrintLayout({ year, months }: Props) {
               ))}
             </tbody>
           </table>
-          <PageFooter right="End of Report" />
+          <PageFooter accentColor={accentColor} right="End of Report" />
         </div>
       )}
     </div>
   )
+
+  return content
 }

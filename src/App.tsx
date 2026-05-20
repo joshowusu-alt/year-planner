@@ -117,7 +117,7 @@ function AppShell() {
 
   useEffect(() => {
     if (!exportConfig) return
-    const id = window.setTimeout(() => window.print(), 300)
+    const id = window.setTimeout(() => window.print(), 600)
     return () => window.clearTimeout(id)
   }, [exportConfig])
 
