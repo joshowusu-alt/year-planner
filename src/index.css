@@ -86,6 +86,11 @@ html {
 }
 
 /* Print / PDF styles */
+/* Print layout: hidden on screen, shown during export print */
+#stratum-print-layout {
+  display: none;
+}
+
 @media print {
   .no-print { display: none !important; }
   .print-table { page-break-inside: avoid; }
@@ -95,6 +100,20 @@ html {
      hide the app shell and show the print layout.
      Without the class, normal app prints work as before.
   ─────────────────────────────────────────────────────────────────── */
+  /* Reset body/html so height:100% + overflow-x:hidden don't clip to 1 page */
+  body.stratum-export-mode,
+  html:has(body.stratum-export-mode) {
+    height: auto !important;
+    overflow: visible !important;
+    background-color: white !important;
+    background: white !important;
+  }
+  /* Allow #root to expand to full content height so all pages print */
+  body.stratum-export-mode #root {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
   body.stratum-export-mode #app-shell {
     display: none !important;
   }
@@ -132,8 +151,8 @@ html {
   }
 
   @page {
-    size: A4 portrait;
-    margin: 12mm 14mm;
+    size: A4 landscape;
+    margin: 8mm;
   }
 }
 

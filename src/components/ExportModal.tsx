@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { usePlanner } from '../context/PlannerContext'
 import { MONTH_SHORT } from '../types'
+import { defaultExportOptions, type ExportConfig, type ExportMode, type ExportOptions } from '../lib/exportIntelligence'
 
 const MONTH_NAMES_FULL = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -27,7 +28,7 @@ const QUARTERS = [
 
 interface Props {
   onClose: () => void
-  onExport: (year: number, months: number[]) => void
+  onExport: (config: ExportConfig) => void
 }
 
 function formatCoverage(year: number, months: number[]) {
@@ -40,6 +41,8 @@ function formatCoverage(year: number, months: number[]) {
 export function ExportModal({ onClose, onExport }: Props) {
   const { store, currentYear, currentMonth } = usePlanner()
   const [selectedYear, setSelectedYear] = useState(currentYear)
+  const [mode, setMode] = useState<ExportMode>('executive-report')
+  const [options, setOptions] = useState<ExportOptions>(defaultExportOptions())
   const [selected, setSelected] = useState<Set<number>>(
     new Set(Array.from({ length: 12 }, (_, i) => i + 1)),
   )
@@ -57,7 +60,9 @@ export function ExportModal({ onClose, onExport }: Props) {
   }).length
   const selectedThemeCount = orderedMonths.filter((month) => monthThemes.has(month)).length
   const calendarPages = Math.ceil(orderedMonths.length / 3)
-  const totalPages = (orderedMonths.length > 0 ? 1 + calendarPages : 0) + (selectedGoalCount > 0 ? 1 : 0)
+  const totalPages = mode === 'forward-planner'
+    ? (orderedMonths.length > 0 ? 2 + calendarPages : 0)
+    : (orderedMonths.length > 0 ? 4 + calendarPages : 0)
   const coverage = formatCoverage(selectedYear, orderedMonths)
   const plannerName = store.plannerTitle.trim() || 'Executive Planning System'
   const organizationName = store.organizationName.trim() || 'STRATUM'
@@ -113,6 +118,10 @@ export function ExportModal({ onClose, onExport }: Props) {
     },
   ]
 
+  function patchOptions(patch: Partial<ExportOptions>) {
+    setOptions((current) => ({ ...current, ...patch }))
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
@@ -157,7 +166,7 @@ export function ExportModal({ onClose, onExport }: Props) {
               </div>
             </div>
             <p className="text-sm max-w-3xl" style={{ color: '#94a3b8' }}>
-              Choose the planning window, keep the strongest month themes, and generate a print-ready PDF with a polished cover, calendar spreads, and year-goal summary.
+              Choose the planning window and export either a polished executive report or a dense forward planner built for print, markup, and review.
             </p>
           </div>
 
@@ -236,6 +245,37 @@ export function ExportModal({ onClose, onExport }: Props) {
               <section className="rounded-[28px] p-5 sm:p-6" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Export mode</p>
+                    <h3 className="text-lg font-black text-white mt-1">Choose the document shape</h3>
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {([
+                    ['executive-report', 'Executive Report', 'Strategic summary, goals, analysis, and calendar appendix.'],
+                    ['forward-planner', 'Forward Planner', 'Three-month print spreads for daily operational planning.'],
+                  ] as const).map(([id, label, caption]) => {
+                    const active = mode === id
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => setMode(id)}
+                        className="rounded-2xl p-4 text-left transition-all"
+                        style={{
+                          background: active ? 'rgba(212,175,55,0.14)' : '#08101f',
+                          border: active ? '1px solid rgba(212,175,55,0.34)' : '1px solid #243447',
+                        }}
+                      >
+                        <p className="text-base font-black" style={{ color: active ? '#fde68a' : '#f8fafc' }}>{label}</p>
+                        <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>{caption}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+
+              <section className="rounded-[28px] p-5 sm:p-6" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
                     <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Year</p>
                     <h3 className="text-lg font-black text-white mt-1">Choose the report year</h3>
                   </div>
@@ -268,6 +308,61 @@ export function ExportModal({ onClose, onExport }: Props) {
                       </button>
                     )
                   })}
+                </div>
+              </section>
+
+              <section className="rounded-[28px] p-5 sm:p-6" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Print settings</p>
+                    <h3 className="text-lg font-black text-white mt-1">Tune the export</h3>
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <label className="rounded-2xl p-4 flex items-center justify-between gap-4" style={{ background: '#08101f', border: '1px solid #243447' }}>
+                    <span>
+                      <span className="block text-sm font-bold text-white">Category legend</span>
+                      <span className="block text-xs mt-1" style={{ color: '#94a3b8' }}>Show colour meaning on planner pages.</span>
+                    </span>
+                    <input type="checkbox" checked={options.includeLegend} onChange={(event) => patchOptions({ includeLegend: event.target.checked })} />
+                  </label>
+                  <label className="rounded-2xl p-4 flex items-center justify-between gap-4" style={{ background: '#08101f', border: '1px solid #243447' }}>
+                    <span>
+                      <span className="block text-sm font-bold text-white">Appendix</span>
+                      <span className="block text-xs mt-1" style={{ color: '#94a3b8' }}>Keep detail pages available where relevant.</span>
+                    </span>
+                    <input type="checkbox" checked={options.includeAppendix} onChange={(event) => patchOptions({ includeAppendix: event.target.checked })} />
+                  </label>
+                  <div className="rounded-2xl p-4" style={{ background: '#08101f', border: '1px solid #243447' }}>
+                    <p className="text-sm font-bold text-white mb-3">Density</p>
+                    <div className="flex gap-2">
+                      {(['compact', 'comfortable'] as const).map((density) => (
+                        <button
+                          key={density}
+                          onClick={() => patchOptions({ density })}
+                          className="compact-tap px-3 py-2 rounded-xl text-xs font-black uppercase tracking-[0.14em]"
+                          style={options.density === density ? { background: '#d4af37', color: '#08101f' } : { background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
+                        >
+                          {density}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl p-4" style={{ background: '#08101f', border: '1px solid #243447' }}>
+                    <p className="text-sm font-bold text-white mb-3">Colour mode</p>
+                    <div className="flex gap-2">
+                      {(['full', 'economy'] as const).map((colourMode) => (
+                        <button
+                          key={colourMode}
+                          onClick={() => patchOptions({ colourMode })}
+                          className="compact-tap px-3 py-2 rounded-xl text-xs font-black uppercase tracking-[0.14em]"
+                          style={options.colourMode === colourMode ? { background: '#d4af37', color: '#08101f' } : { background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
+                        >
+                          {colourMode === 'full' ? 'Full colour' : 'Economy'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -449,23 +544,23 @@ export function ExportModal({ onClose, onExport }: Props) {
                     <div className="flex items-start gap-3">
                       <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black" style={{ background: 'rgba(212,175,55,0.12)', color: '#d4af37' }}>1</span>
                       <div>
-                        <p className="text-sm font-bold text-white">Cover page</p>
-                        <p className="text-xs" style={{ color: '#94a3b8' }}>Identity, range, metrics, and selected month themes.</p>
+                        <p className="text-sm font-bold text-white">Authored cover page</p>
+                        <p className="text-xs" style={{ color: '#94a3b8' }}>Identity, year framing, metrics, and selected month themes.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black" style={{ background: 'rgba(96,165,250,0.12)', color: '#93c5fd' }}>2</span>
                       <div>
-                        <p className="text-sm font-bold text-white">Calendar spreads</p>
-                        <p className="text-xs" style={{ color: '#94a3b8' }}>Three months per page, grouped for clean printing.</p>
+                        <p className="text-sm font-bold text-white">{mode === 'forward-planner' ? 'Forward planner spreads' : 'Report analysis'}</p>
+                        <p className="text-xs" style={{ color: '#94a3b8' }}>{mode === 'forward-planner' ? 'Three months per page with dense planning rows.' : 'Year, quarter, category, and recurring rhythm intelligence.'}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black" style={{ background: 'rgba(52,211,153,0.12)', color: '#6ee7b7' }}>3</span>
                       <div>
-                        <p className="text-sm font-bold text-white">Goal summary</p>
+                        <p className="text-sm font-bold text-white">Strategic goals</p>
                         <p className="text-xs" style={{ color: '#94a3b8' }}>
-                          {selectedGoalCount > 0 ? 'Included automatically for the selected year.' : 'Skipped because there are no goals for this year.'}
+                          {selectedGoalCount > 0 ? 'Included automatically for the selected year.' : 'Included as a structured framework even before goals exist.'}
                         </p>
                       </div>
                     </div>
@@ -509,12 +604,12 @@ export function ExportModal({ onClose, onExport }: Props) {
           <div className="flex-1 min-w-0 px-1">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Export action</p>
             <p className="text-sm truncate" style={{ color: '#94a3b8' }}>
-              Generates the report, then opens the browser print dialog for PDF save.
+              Generates the {mode === 'forward-planner' ? 'forward planner' : 'executive report'}, then opens the browser print dialog for PDF save.
             </p>
           </div>
 
           <button
-            onClick={() => orderedMonths.length > 0 && onExport(selectedYear, orderedMonths)}
+            onClick={() => orderedMonths.length > 0 && onExport({ mode, year: selectedYear, months: orderedMonths, options })}
             disabled={orderedMonths.length === 0}
             className="sm:min-w-72 px-5 py-3.5 rounded-2xl text-sm font-black tracking-[0.16em] uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
@@ -524,7 +619,7 @@ export function ExportModal({ onClose, onExport }: Props) {
             }}
           >
             <span className="inline-flex items-center justify-center gap-2">
-              Generate PDF
+              Generate {mode === 'forward-planner' ? 'Planner' : 'Report'}
               <ArrowRight size={16} />
             </span>
           </button>

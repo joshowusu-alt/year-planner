@@ -1,3 +1,4 @@
+// EXPORT_LAYOUT_V2_MARKER
 /**
  * PrintLayout — print document for STRATUM PDF export.
  *
@@ -17,6 +18,8 @@ import {
   getCategoryStyle,
   GOAL_STATUS_LABELS,
 } from '../types'
+import { ExportPrintLayout } from './ExportPrintLayout'
+import type { ExportConfig } from '../lib/exportIntelligence'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -379,12 +382,17 @@ function PageFooter({ right, accentColor }: { right: string; accentColor: string
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-interface Props {
+interface LegacyProps {
   year: number
   months: number[] // 1-based, sorted ascending
 }
 
-export function PrintLayout({ year, months }: Props) {
+interface Props extends LegacyProps {
+  mode?: ExportConfig['mode']
+  options?: Partial<ExportConfig['options']>
+}
+
+function LegacyPrintLayout({ year, months }: LegacyProps) {
   const { store } = usePlanner()
 
   // Set body class so @media print CSS knows to hide #root and show this layout
@@ -525,7 +533,7 @@ export function PrintLayout({ year, months }: Props) {
                 {[
                   ['Generated', today],
                   ['Pages', `${totalPages}`],
-                  ['Goal summary', yearGoals.length > 0 ? 'Included' : 'Skipped'],
+                  ['Strategic goals', yearGoals.length > 0 ? 'Included' : 'Framework ready'],
                 ].map(([label, value]) => (
                   <div
                     key={label}
@@ -717,7 +725,7 @@ export function PrintLayout({ year, months }: Props) {
                 {[
                   ['01', 'Cover page', 'Report identity, coverage, and key metrics'],
                   ['02', `${monthGroups.length} calendar page${monthGroups.length === 1 ? '' : 's'}`, 'Three months per page with event summaries'],
-                  ['03', yearGoals.length > 0 ? 'Goal summary' : 'Goal summary omitted', yearGoals.length > 0 ? `${yearGoals.length} year goal entries included` : 'No goals recorded for this year'],
+                  ['03', 'Strategic goals', yearGoals.length > 0 ? `${yearGoals.length} year goal entries included` : 'No goals recorded yet; strategic framework included'],
                 ].map(([step, label, text]) => (
                   <div key={step} style={{ display: 'flex', gap: 10 }}>
                     <div
@@ -898,4 +906,12 @@ export function PrintLayout({ year, months }: Props) {
   )
 
   return content
+}
+
+export function PrintLayout({ year, months, mode, options }: Props) {
+  if (mode) {
+    return <ExportPrintLayout year={year} months={months} mode={mode} options={options} />
+  }
+
+  return <LegacyPrintLayout year={year} months={months} />
 }
