@@ -99,6 +99,7 @@ interface PlannerContextValue {
   currentWeekStart: string
   setCurrentWeekStart: (d: string) => void
   isSyncing: boolean
+  forceSync: () => void
   conflictWarning: boolean
   dismissConflict: () => void
 }
@@ -134,6 +135,23 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   const dismissConflict = useCallback(() => {
     setConflictWarning(false)
   }, [])
+
+  const forceSync = useCallback(() => {
+    if (!syncUserId || !isSupabaseConfigured || isSyncing) return
+    setConflictWarning(false)
+    conflictPauseRef.current = false
+    setIsSyncing(true)
+    loadStoreFromSupabaseWithMeta(syncUserId)
+      .then((remote) => {
+        if (remote) {
+          setStore(remote.store)
+          saveStore(remote.store)
+          lastSyncedAtRef.current = remote.updatedAt
+        }
+        setIsSyncing(false)
+      })
+      .catch(() => setIsSyncing(false))
+  }, [syncUserId, isSyncing])
 
   useEffect(() => {
     const flush = () => {
@@ -419,6 +437,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       currentMonth, setCurrentMonth,
       currentWeekStart, setCurrentWeekStart,
       isSyncing,
+      forceSync,
       conflictWarning,
       dismissConflict,
     }}>

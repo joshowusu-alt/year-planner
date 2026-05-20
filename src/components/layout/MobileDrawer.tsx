@@ -1,4 +1,4 @@
-import { X, FileText, Settings, LogOut, CheckSquare, Layers, BarChart2, Search, FileDown } from 'lucide-react'
+import { X, FileText, Settings, LogOut, CheckSquare, Layers, BarChart2, Search, FileDown, RefreshCw } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { usePlanner } from '../../context/PlannerContext'
 import type { Page } from './Sidebar'
@@ -22,7 +22,7 @@ const drawerItems: { id: Page; label: string; icon: React.ElementType }[] = [
 
 export function MobileDrawer({ open, onClose, page, onNavigate, onExportRequest }: Props) {
   const { user, signOut, isConfigured } = useAuth()
-  const { store, isSyncing } = usePlanner()
+  const { store, isSyncing, forceSync } = usePlanner()
 
   function handleNav(p: Page) {
     onNavigate(p)
@@ -115,13 +115,19 @@ export function MobileDrawer({ open, onClose, page, onNavigate, onExportRequest 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-300 truncate">{user.fullName ?? user.email}</p>
                 {isConfigured && (
-                  <p className="text-xs text-slate-600">
+                  <button
+                    onClick={forceSync}
+                    disabled={isSyncing}
+                    className="flex items-center gap-1 text-xs transition-opacity hover:opacity-80 disabled:cursor-default"
+                    aria-label="Force sync"
+                    title="Tap to sync now"
+                  >
                     {isSyncing ? (
-                      <span className="text-amber-600 animate-pulse">● syncing…</span>
+                      <><RefreshCw size={11} className="animate-spin text-amber-600" /><span className="text-amber-600">syncing…</span></>
                     ) : (
-                      <span className="text-emerald-700">● synced</span>
+                      <><RefreshCw size={11} className="text-emerald-700" /><span className="text-emerald-700">synced</span></>
                     )}
-                  </p>
+                  </button>
                 )}
               </div>
             </div>

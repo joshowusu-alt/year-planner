@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers, Search, BarChart2, FileDown } from 'lucide-react'
+import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers, Search, BarChart2, FileDown, RefreshCw } from 'lucide-react'
 import { usePlanner } from '../../context/PlannerContext'
 import { useAuth } from '../../context/AuthContext'
 
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function Sidebar({ page, onNavigate, onExportRequest }: Props) {
-  const { store, isSyncing } = usePlanner()
+  const { store, isSyncing, forceSync } = usePlanner()
   const { user, signOut, isConfigured } = useAuth()
 
   const mainItems: { id: Page; label: string; icon: React.ElementType }[] = [
@@ -127,13 +127,19 @@ export function Sidebar({ page, onNavigate, onExportRequest }: Props) {
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-slate-300 truncate">{user.fullName ?? user.email}</p>
                 {isConfigured && (
-                  <p className="text-[10px] text-slate-600">
+                  <button
+                    onClick={forceSync}
+                    disabled={isSyncing}
+                    className="flex items-center gap-1 text-[10px] transition-opacity hover:opacity-80 disabled:cursor-default"
+                    aria-label="Force sync"
+                    title="Tap to sync now"
+                  >
                     {isSyncing ? (
-                      <span className="text-amber-600 animate-pulse">● syncing…</span>
+                      <><RefreshCw size={9} className="animate-spin text-amber-600" /><span className="text-amber-600">syncing…</span></>
                     ) : (
-                      <span className="text-emerald-700">● synced</span>
+                      <><RefreshCw size={9} className="text-emerald-700" /><span className="text-emerald-700">synced</span></>
                     )}
-                  </p>
+                  </button>
                 )}
               </div>
             </div>
