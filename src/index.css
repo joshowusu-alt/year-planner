@@ -106,6 +106,12 @@ html {
     background-color: white !important;
     background: white !important;
   }
+  /* Allow #root to expand to full content height so all pages print */
+  body.stratum-export-mode #root {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
   body.stratum-export-mode #app-shell {
     display: none !important;
   }
