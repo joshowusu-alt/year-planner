@@ -1,9 +1,10 @@
 import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react'
+import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PlannerProvider, usePlanner } from './context/PlannerContext'
 import { UndoContext } from './context/UndoContext'
 import { useUndoToast } from './hooks/useUndoToast'
-import { Sidebar, type Page } from './components/layout/Sidebar'
+import { Sidebar } from './components/layout/Sidebar'
 import { MobileHeader } from './components/layout/MobileHeader'
 import { NaturalLanguageInput } from './components/NaturalLanguageInput'
 import { BottomNavigation } from './components/layout/BottomNavigation'
@@ -33,6 +34,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ de
 // print preview renders a solid black page. Keep these as static imports.
 import { ExportModal } from './components/ExportModal'
 import { PrintLayout } from './components/PrintLayout'
+import type { ExportConfig } from './lib/exportIntelligence'
 
 function PageFallback() {
   return (
@@ -47,27 +49,26 @@ function AppShell() {
   const { addEvent, conflictWarning, dismissConflict } = usePlanner()
   useReminders()
   const { pushUndo, toastNode } = useUndoToast()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const locationRef = useRef(location)
 
-  const getPageFromHash = (): Page => {
-    const hash = window.location.hash.slice(1) as Page
-    const validPages: Page[] = ['planner','monthly','weekly','goals','tasks','notes','settings','strategy','search','dashboard']
-    return validPages.includes(hash) ? hash : 'planner'
-  }
-
-  const [page, setPage] = useState<Page>(getPageFromHash)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileAddEvent, setMobileAddEvent] = useState(false)
   const [showNLInput, setShowNLInput] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
-  const [exportConfig, setExportConfig] = useState<{ year: number; months: number[] } | null>(null)
-  const pageRef = useRef<Page>('planner')
+  const [exportConfig, setExportConfig] = useState<ExportConfig | null>(null)
   const pendingPrintRef = useRef(false)
   const [shareToken, setShareToken] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search)
     return params.get('share')
   })
   const { isMobile } = useBreakpoint()
+
+  useEffect(() => {
+    locationRef.current = location
+  }, [location])
 
   const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key !== '/') return
@@ -89,33 +90,6 @@ function AppShell() {
   }, [user?.id])
 
   useEffect(() => {
-    pageRef.current = page
-    // PKCE: code comes in via ?code= query param; implicit: token in #access_token= hash.
-    // In both cases, leave the URL untouched while Supabase processes the callback.
-    const sp = new URLSearchParams(window.location.search)
-    if (
-      window.location.hash.startsWith('#access_token') ||
-      window.location.hash.startsWith('#error_description') ||
-      sp.has('code') ||
-      sp.has('error')
-    ) return
-    const newHash = page === 'planner' ? '' : `#${page}`
-    if (window.location.hash !== newHash) {
-      if (page === 'planner') {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search)
-      } else {
-        window.history.pushState(null, '', window.location.pathname + window.location.search + `#${page}`)
-      }
-    }
-  }, [page])
-
-  useEffect(() => {
-    const handlePopState = () => setPage(getPageFromHash())
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
-
-  useEffect(() => {
     if (!exportConfig) return
     const id = window.setTimeout(() => window.print(), 600)
     return () => window.clearTimeout(id)
@@ -134,29 +108,27 @@ function AppShell() {
 
   useEffect(() => {
     const handlePlannerPrintRequest = () => {
-      if (pageRef.current === 'planner') {
+      const current = locationRef.current.pathname
+      if (current === '/planner' || current === '/') {
         window.setTimeout(() => window.print(), 75)
         return
       }
-
       pendingPrintRef.current = true
-      setPage('planner')
+      navigate('/planner')
     }
-
     window.addEventListener(PLANNER_PRINT_REQUEST_EVENT, handlePlannerPrintRequest)
     return () => window.removeEventListener(PLANNER_PRINT_REQUEST_EVENT, handlePlannerPrintRequest)
-  }, [])
+  }, [navigate])
 
   useEffect(() => {
-    if (page !== 'planner' || !pendingPrintRef.current) return
-
-    const timeoutId = window.setTimeout(() => {
+    const current = location.pathname
+    if ((current !== '/planner' && current !== '/') || !pendingPrintRef.current) return
+    const id = window.setTimeout(() => {
       window.print()
       pendingPrintRef.current = false
     }, 75)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [page])
+    return () => window.clearTimeout(id)
+  }, [location.pathname])
 
   if (loading) {
     return (
@@ -215,14 +187,12 @@ function AppShell() {
       )}
       <div id="app-shell" className="flex flex-col w-full max-w-full overflow-x-hidden md:flex-row" style={{ background: '#0a0e1a', color: '#e2e8f0', height: '100%' }}>
         <div className="hidden md:block">
-          <Sidebar page={page} onNavigate={setPage} onExportRequest={() => setShowExportModal(true)} />
+          <Sidebar onExportRequest={() => setShowExportModal(true)} />
         </div>
 
         <MobileDrawer
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
-          page={page}
-          onNavigate={setPage}
           onExportRequest={() => setShowExportModal(true)}
         />
 
@@ -237,21 +207,24 @@ function AppShell() {
 
           <div className={isMobile ? 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-20' : 'flex-1 min-h-0 overflow-hidden'}>
             <Suspense fallback={<PageFallback />}>
-              {page === 'planner'   && <PlannerPage />}
-              {page === 'monthly'   && <MonthlyCalendar />}
-              {page === 'weekly'    && <WeeklyView />}
-              {page === 'goals'     && <GoalsPage onNavigate={setPage} />}
-              {page === 'tasks'     && <TasksPage />}
-              {page === 'notes'     && <NotesPage />}
-              {page === 'strategy'  && <StrategyPage />}
-              {page === 'search'    && <SearchPage onNavigate={setPage} />}
-              {page === 'settings'  && <SettingsPage />}
-              {page === 'dashboard' && <DashboardPage />}
+              <Routes>
+                <Route path="/" element={<Navigate to="/planner" replace />} />
+                <Route path="/planner"   element={<PlannerPage />} />
+                <Route path="/monthly"   element={<MonthlyCalendar />} />
+                <Route path="/weekly"    element={<WeeklyView />} />
+                <Route path="/goals"     element={<GoalsPage />} />
+                <Route path="/tasks"     element={<TasksPage />} />
+                <Route path="/notes"     element={<NotesPage />} />
+                <Route path="/strategy"  element={<StrategyPage />} />
+                <Route path="/search"    element={<SearchPage />} />
+                <Route path="/settings"  element={<SettingsPage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+              </Routes>
             </Suspense>
           </div>
         </div>
 
-        <BottomNavigation page={page} onNavigate={setPage} />
+        <BottomNavigation />
 
         {showNLInput && (
           <NaturalLanguageInput onClose={() => setShowNLInput(false)} />
@@ -284,16 +257,23 @@ function AppShell() {
           {showExportModal && (
             <ExportModal
               onClose={() => setShowExportModal(false)}
-              onExport={(year, months) => {
+              onExport={(config) => {
                 setShowExportModal(false)
-                setExportConfig({ year, months })
+                setExportConfig(config)
               }}
             />
           )}
         </Suspense>
       </div>
       <Suspense fallback={<PageFallback />}>
-        {exportConfig && <PrintLayout year={exportConfig.year} months={exportConfig.months} />}
+        {exportConfig && (
+          <PrintLayout
+            year={exportConfig.year}
+            months={exportConfig.months}
+            mode={exportConfig.mode}
+            options={exportConfig.options}
+          />
+        )}
       </Suspense>
     </UndoContext.Provider>
   )
@@ -303,7 +283,9 @@ export default function App() {
   return (
     <AuthProvider>
       <PlannerProvider>
-        <AppShell />
+        <HashRouter>
+          <AppShell />
+        </HashRouter>
       </PlannerProvider>
     </AuthProvider>
   )

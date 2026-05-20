@@ -1,20 +1,18 @@
 import { CalendarDays, CalendarRange, Calendar, Target, BarChart2 } from 'lucide-react'
-import type { Page } from './Sidebar'
+import { useNavigate, useLocation } from 'react-router-dom'
 
-interface Props {
-  page: Page
-  onNavigate: (p: Page) => void
-}
-
-const tabs: { id: Page; label: string; icon: React.ElementType }[] = [
-  { id: 'planner',   label: 'Annual',    icon: CalendarDays },
-  { id: 'monthly',   label: 'Monthly',   icon: CalendarRange },
-  { id: 'weekly',    label: 'Weekly',    icon: Calendar },
-  { id: 'goals',     label: 'Goals',     icon: Target },
-  { id: 'dashboard', label: 'Dashboard', icon: BarChart2 },
+const tabs: { path: string; label: string; icon: React.ElementType }[] = [
+  { path: '/planner',   label: 'Annual',    icon: CalendarDays },
+  { path: '/monthly',   label: 'Monthly',   icon: CalendarRange },
+  { path: '/weekly',    label: 'Weekly',    icon: Calendar },
+  { path: '/goals',     label: 'Goals',     icon: Target },
+  { path: '/dashboard', label: 'Dashboard', icon: BarChart2 },
 ]
 
-export function BottomNavigation({ page, onNavigate }: Props) {
+export function BottomNavigation() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+
   return (
     <nav
       role="navigation"
@@ -25,12 +23,12 @@ export function BottomNavigation({ page, onNavigate }: Props) {
         borderTop: '1px solid #1e2d40',
       }}
     >
-      {tabs.map(({ id, label, icon: Icon }) => {
-        const active = page === id
+      {tabs.map(({ path, label, icon: Icon }) => {
+        const active = pathname === path
         return (
           <button
-            key={id}
-            onClick={() => onNavigate(id)}
+            key={path}
+            onClick={() => navigate(path)}
             aria-current={active ? 'page' : undefined}
             aria-label={label}
             className="focus-ring flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-14 active:bg-white/5 transition-colors"

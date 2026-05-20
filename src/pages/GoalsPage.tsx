@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, CheckSquare, Square, Flag, X, Lock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { usePlanner } from '../context/PlannerContext'
 import { useAuth } from '../context/AuthContext'
 import type { Goal, Milestone, PriorityLevel, GoalStatus } from '../types'
-import type { Page } from '../components/layout/Sidebar'
 import { PRIORITY_COLORS, PRIORITY_LABELS, GOAL_STATUS_LABELS } from '../types'
 
-// ─── Progress bar ─────────────────────────────────────────────────────────────────
+// ─── Progress bar ─────────────────────────────────────────────────────────────
 
 function ProgressBar({ value, color }: { value: number; color?: string }) {
   return (
@@ -19,7 +19,7 @@ function ProgressBar({ value, color }: { value: number; color?: string }) {
   )
 }
 
-// ─── Status badge ───────────────────────────────────────────────────────────────
+// ─── Status badge ─────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<GoalStatus, { bg: string; text: string }> = {
   'not-started': { bg: '#1e2d40', text: '#94a3b8' },
@@ -40,7 +40,7 @@ function StatusBadge({ status }: { status: GoalStatus }) {
   )
 }
 
-// ─── Goal modal form ───────────────────────────────────────────────────────────────
+// ─── Goal modal form ──────────────────────────────────────────────────────────
 
 interface GoalFormData {
   title: string
@@ -199,7 +199,7 @@ function GoalModal({
   )
 }
 
-// ─── Milestone row ────────────────────────────────────────────────────────────────
+// ─── Milestone row ────────────────────────────────────────────────────────────
 
 function MilestoneRow({
   milestone,
@@ -233,11 +233,12 @@ function MilestoneRow({
   )
 }
 
-// ─── Goal card ────────────────────────────────────────────────────────────────────
+// ─── Goal card ────────────────────────────────────────────────────────────────
 
-function GoalCard({ goal, onNavigate }: { goal: Goal; onNavigate: (p: Page) => void }) {
+function GoalCard({ goal }: { goal: Goal }) {
   const { editGoal, removeGoal, addMilestoneToGoal, editMilestone, removeMilestone, store, toggleTask } = usePlanner()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const canEdit = !goal.userId || goal.userId === user?.id
   const linkedTasks = store.tasks.filter((t) => t.goalId === goal.id)
   const completedLinkedTasks = linkedTasks.filter((t) => t.completed).length
@@ -318,7 +319,7 @@ function GoalCard({ goal, onNavigate }: { goal: Goal; onNavigate: (p: Page) => v
           {linkedTasks.length > 0 && (
             <button
               className="mt-1.5 flex items-center gap-1.5 rounded-lg px-1 py-1 -mx-1 active:bg-white/10 transition-colors"
-              onClick={() => onNavigate('tasks')}
+              onClick={() => navigate('/tasks')}
               title="View linked tasks"
             >
               <Square size={10} className="text-blue-400" />
@@ -405,7 +406,7 @@ function GoalCard({ goal, onNavigate }: { goal: Goal; onNavigate: (p: Page) => v
   )
 }
 
-// ─── Pareto 80/20 Insight ───────────────────────────────────────────────────────────────
+// ─── Pareto 80/20 Insight ─────────────────────────────────────────────────────
 
 function ParetoInsight({ goals }: { goals: Goal[] }) {
   const [open, setOpen] = useState(true)
@@ -511,9 +512,9 @@ function ParetoInsight({ goals }: { goals: Goal[] }) {
   )
 }
 
-// ─── Goals page ─────────────────────────────────────────────────────────────────────
+// ─── Goals page ───────────────────────────────────────────────────────────────
 
-export function GoalsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+export function GoalsPage() {
   const { store, addGoal, currentYear } = usePlanner()
   const [showModal, setShowModal] = useState(false)
   const [filterQ, setFilterQ] = useState<number | 'all'>('all')
@@ -533,7 +534,7 @@ export function GoalsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
       <div className="flex items-center gap-3 md:gap-4 mb-4 md:mb-6 flex-wrap">
         <div>
           <h2 className="text-xl font-black tracking-widest uppercase" style={{ color: '#d4af37' }}>
-            Goals &amp; Milestones
+            Goals & Milestones
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">{currentYear} · {store.goals.filter(g=>g.year===currentYear).length} goals</p>
         </div>
@@ -597,7 +598,7 @@ export function GoalsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
               <p className="text-xs text-slate-600 pl-6">No goals for Q{q}</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {qGoals.map((goal) => <GoalCard key={goal.id} goal={goal} onNavigate={onNavigate} />)}
+                {qGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
               </div>
             )}
           </div>
@@ -607,7 +608,7 @@ export function GoalsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Target size={48} className="text-slate-700 mb-3" />
             <p className="text-slate-500 font-semibold">No goals yet</p>
-            <p className="text-xs text-slate-600 mt-1">Click &quot;New Goal&quot; to get started</p>
+            <p className="text-xs text-slate-600 mt-1">Click "New Goal" to get started</p>
           </div>
         )}
       </div>
