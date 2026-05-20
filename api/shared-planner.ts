@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { loadCreateSupabaseClient, type ServerSupabaseClientFactory } from './runtime.ts'
+import { loadCreateSupabaseClient, type ServerSupabaseClientFactory } from './runtime'
 
 const SHARE_LINK_TTL_DAYS = 90
 

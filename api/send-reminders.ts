@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 
 type ReminderSupabaseClient = {
   from: (table: string) => {
-    select: (columns: string) => Promise<{ data: Array<{ user_id: string; store?: { events?: PlannerEvent[] } }> | Array<{ user_id: string; endpoint: string; subscription: unknown }> | null; error: { message: string } | null }>
+    select: (columns: string) => Promise<{ data: unknown[] | null; error: { message: string } | null }>
     delete: () => {
       eq: (column: string, value: string) => Promise<{ error: { message: string } | null }>
     }
@@ -118,10 +118,10 @@ export function createSendRemindersHandler(overrides: Partial<ReminderDeps> = {}
       const now = nowDate.getTime()
       const todayStr = format(nowDate, 'yyyy-MM-dd')
 
-      const { data: plannerRows, error: plannerErr } = await supabase
+      const { data: plannerData, error: plannerErr } = await supabase
         .from('planner_data')
         .select('user_id, store')
-      const { data: subscriptions, error: subErr } = await supabase
+      const { data: subscriptionData, error: subErr } = await supabase
         .from('push_subscriptions')
         .select('*')
 
@@ -131,10 +131,13 @@ export function createSendRemindersHandler(overrides: Partial<ReminderDeps> = {}
       let sent = 0
       let errors = 0
 
-      for (const row of (plannerRows ?? [])) {
+      const plannerRows = (plannerData ?? []) as Array<{ user_id: string; store?: { events?: PlannerEvent[] } }>
+      const subscriptions = (subscriptionData ?? []) as Array<{ user_id: string; endpoint: string; subscription: unknown }>
+
+      for (const row of plannerRows) {
         const events: PlannerEvent[] = row.store?.events ?? []
         const userId: string = row.user_id
-        const userSubs = subscriptions?.filter((s) => s.user_id === userId) ?? []
+        const userSubs = subscriptions.filter((s) => s.user_id === userId)
 
         if (userSubs.length === 0) continue
 

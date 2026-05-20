@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getBearerToken, loadCreateSupabaseClient, type ServerSupabaseClientFactory } from './runtime.ts'
+import { getBearerToken, loadCreateSupabaseClient, type ServerSupabaseClientFactory } from './runtime'
 
 type UnsubscribeDeps = {
   createSupabaseClient: ServerSupabaseClientFactory
