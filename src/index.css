@@ -86,6 +86,11 @@ html {
 }
 
 /* Print / PDF styles */
+/* Print layout: hidden on screen, shown during export print */
+#stratum-print-layout {
+  display: none;
+}
+
 @media print {
   .no-print { display: none !important; }
   .print-table { page-break-inside: avoid; }

@@ -427,7 +427,6 @@ export function PrintLayout({ year, months }: Props) {
     <div
       id="stratum-print-layout"
       style={{
-        display: 'none',
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
         color: '#1e293b',
