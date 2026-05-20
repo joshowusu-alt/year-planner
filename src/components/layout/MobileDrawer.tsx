@@ -1,31 +1,32 @@
 import { X, FileText, Settings, LogOut, CheckSquare, Layers, BarChart2, Search, FileDown } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { usePlanner } from '../../context/PlannerContext'
-import type { Page } from './Sidebar'
+import { SyncStatusIndicator } from './SyncStatusIndicator'
 
 interface Props {
   open: boolean
   onClose: () => void
-  page: Page
-  onNavigate: (p: Page) => void
   onExportRequest?: () => void
 }
 
-const drawerItems: { id: Page; label: string; icon: React.ElementType }[] = [
-  { id: 'tasks',     label: 'Tasks',     icon: CheckSquare },
-  { id: 'strategy',  label: 'Strategy',  icon: Layers },
-  { id: 'dashboard', label: 'Dashboard', icon: BarChart2 },
-  { id: 'search',    label: 'Search',    icon: Search },
-  { id: 'notes',     label: 'Notes',     icon: FileText },
-  { id: 'settings',  label: 'Settings',  icon: Settings },
+const drawerItems: { path: string; label: string; icon: React.ElementType }[] = [
+  { path: '/tasks',     label: 'Tasks',     icon: CheckSquare },
+  { path: '/strategy',  label: 'Strategy',  icon: Layers },
+  { path: '/dashboard', label: 'Dashboard', icon: BarChart2 },
+  { path: '/search',    label: 'Search',    icon: Search },
+  { path: '/notes',     label: 'Notes',     icon: FileText },
+  { path: '/settings',  label: 'Settings',  icon: Settings },
 ]
 
-export function MobileDrawer({ open, onClose, page, onNavigate, onExportRequest }: Props) {
+export function MobileDrawer({ open, onClose, onExportRequest }: Props) {
   const { user, signOut, isConfigured } = useAuth()
-  const { store, isSyncing } = usePlanner()
+  const { store, isSyncing, forceSync, lastSyncedAt, syncError, syncMode } = usePlanner()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
 
-  function handleNav(p: Page) {
-    onNavigate(p)
+  function handleNav(path: string) {
+    navigate(path)
     onClose()
   }
 
@@ -72,12 +73,12 @@ export function MobileDrawer({ open, onClose, page, onNavigate, onExportRequest 
 
         {/* Nav items not in bottom bar */}
         <nav className="flex-1 px-4 py-4 space-y-1">
-          {drawerItems.map(({ id, label, icon: Icon }) => {
-            const active = page === id
+          {drawerItems.map(({ path, label, icon: Icon }) => {
+            const active = pathname === path
             return (
               <button
-                key={id}
-                onClick={() => handleNav(id)}
+                key={path}
+                onClick={() => handleNav(path)}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all active:bg-white/10"
                 style={active ? { background: '#1e2d40', color: '#d4af37' } : { color: '#94a3b8' }}
               >
@@ -115,13 +116,13 @@ export function MobileDrawer({ open, onClose, page, onNavigate, onExportRequest 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-300 truncate">{user.fullName ?? user.email}</p>
                 {isConfigured && (
-                  <p className="text-xs text-slate-600">
-                    {isSyncing ? (
-                      <span className="text-amber-600 animate-pulse">● syncing…</span>
-                    ) : (
-                      <span className="text-emerald-700">● synced</span>
-                    )}
-                  </p>
+                  <SyncStatusIndicator
+                    syncMode={syncMode}
+                    lastSyncedAt={lastSyncedAt}
+                    syncError={syncError}
+                    onForceSync={forceSync}
+                    disabled={isSyncing}
+                  />
                 )}
               </div>
             </div>
@@ -139,4 +140,3 @@ export function MobileDrawer({ open, onClose, page, onNavigate, onExportRequest 
     </>
   )
 }
-

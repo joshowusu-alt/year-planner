@@ -1,34 +1,34 @@
 import { CalendarDays, CalendarRange, Calendar, Target, CheckSquare, FileText, Settings, ChevronRight, LogOut, Layers, Search, BarChart2, FileDown } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { usePlanner } from '../../context/PlannerContext'
 import { useAuth } from '../../context/AuthContext'
-
-export type Page = 'planner' | 'monthly' | 'weekly' | 'goals' | 'tasks' | 'notes' | 'settings' | 'strategy' | 'search' | 'dashboard'
+import { SyncStatusIndicator } from './SyncStatusIndicator'
 
 interface Props {
-  page: Page
-  onNavigate: (p: Page) => void
   onExportRequest?: () => void
 }
 
-export function Sidebar({ page, onNavigate, onExportRequest }: Props) {
-  const { store, isSyncing } = usePlanner()
+const mainItems: { path: string; label: string; icon: React.ElementType }[] = [
+  { path: '/planner',   label: 'Annual View',  icon: CalendarDays },
+  { path: '/monthly',   label: 'Monthly View', icon: CalendarRange },
+  { path: '/weekly',    label: 'Weekly View',  icon: Calendar },
+  { path: '/goals',     label: 'Goals',        icon: Target },
+  { path: '/tasks',     label: 'Tasks',        icon: CheckSquare },
+  { path: '/strategy',  label: 'Strategy',     icon: Layers },
+  { path: '/dashboard', label: 'Dashboard',    icon: BarChart2 },
+  { path: '/notes',     label: 'Notes',        icon: FileText },
+  { path: '/search',    label: 'Search',       icon: Search },
+]
+
+const bottomItems: { path: string; label: string; icon: React.ElementType }[] = [
+  { path: '/settings', label: 'Settings', icon: Settings },
+]
+
+export function Sidebar({ onExportRequest }: Props) {
+  const { store, isSyncing, forceSync, lastSyncedAt, syncError, syncMode } = usePlanner()
   const { user, signOut, isConfigured } = useAuth()
-
-  const mainItems: { id: Page; label: string; icon: React.ElementType }[] = [
-    { id: 'planner',   label: 'Annual View',  icon: CalendarDays },
-    { id: 'monthly',   label: 'Monthly View', icon: CalendarRange },
-    { id: 'weekly',    label: 'Weekly View',  icon: Calendar },
-    { id: 'goals',     label: 'Goals',        icon: Target },
-    { id: 'tasks',     label: 'Tasks',        icon: CheckSquare },
-    { id: 'strategy',  label: 'Strategy',     icon: Layers },
-    { id: 'dashboard', label: 'Dashboard',    icon: BarChart2 },
-    { id: 'notes',     label: 'Notes',        icon: FileText },
-    { id: 'search',    label: 'Search',       icon: Search },
-  ]
-
-  const bottomItems: { id: Page; label: string; icon: React.ElementType }[] = [
-    { id: 'settings', label: 'Settings', icon: Settings },
-  ]
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
 
   return (
     <aside
@@ -67,12 +67,12 @@ export function Sidebar({ page, onNavigate, onExportRequest }: Props) {
 
       {/* Main nav */}
       <nav role="navigation" aria-label="Main navigation" className="flex-1 py-4 px-3 space-y-1">
-        {mainItems.map(({ id, label, icon: Icon }) => {
-          const active = page === id
+        {mainItems.map(({ path, label, icon: Icon }) => {
+          const active = pathname === path
           return (
             <button
-              key={id}
-              onClick={() => onNavigate(id)}
+              key={path}
+              onClick={() => navigate(path)}
               aria-current={active ? 'page' : undefined}
               aria-label={label}
               title={label}
@@ -100,15 +100,15 @@ export function Sidebar({ page, onNavigate, onExportRequest }: Props) {
             Export PDF
           </button>
         )}
-        {bottomItems.map(({ id, label, icon: Icon }) => (
+        {bottomItems.map(({ path, label, icon: Icon }) => (
           <button
-            key={id}
-            onClick={() => onNavigate(id)}
-            aria-current={page === id ? 'page' : undefined}
+            key={path}
+            onClick={() => navigate(path)}
+            aria-current={pathname === path ? 'page' : undefined}
             aria-label={label}
             title={label}
             className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
-            style={page === id ? { background: '#1e2d40', color: '#d4af37' } : { color: '#94a3b8' }}
+            style={pathname === path ? { background: '#1e2d40', color: '#d4af37' } : { color: '#94a3b8' }}
           >
             <Icon size={16} />
             {label}
@@ -127,13 +127,14 @@ export function Sidebar({ page, onNavigate, onExportRequest }: Props) {
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-slate-300 truncate">{user.fullName ?? user.email}</p>
                 {isConfigured && (
-                  <p className="text-[10px] text-slate-600">
-                    {isSyncing ? (
-                      <span className="text-amber-600 animate-pulse">● syncing…</span>
-                    ) : (
-                      <span className="text-emerald-700">● synced</span>
-                    )}
-                  </p>
+                  <SyncStatusIndicator
+                    syncMode={syncMode}
+                    lastSyncedAt={lastSyncedAt}
+                    syncError={syncError}
+                    onForceSync={forceSync}
+                    disabled={isSyncing}
+                    compact
+                  />
                 )}
               </div>
             </div>
@@ -147,7 +148,6 @@ export function Sidebar({ page, onNavigate, onExportRequest }: Props) {
             </button>
           </div>
         )}
-
       </div>
     </aside>
   )

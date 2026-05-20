@@ -1,14 +1,10 @@
 import { useState, useMemo } from 'react'
 import { Search, CalendarDays, Target, CheckSquare, FileText, X, SlidersHorizontal } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { format, parseISO, isAfter, isBefore, isEqual } from 'date-fns'
 import { usePlanner } from '../context/PlannerContext'
 import { getCategoryStyle, GOAL_STATUS_LABELS } from '../types'
 import type { GoalStatus } from '../types'
-import type { Page } from '../components/layout/Sidebar'
-
-interface Props {
-  onNavigate: (p: Page) => void
-}
 
 type ResultTab = 'all' | 'events' | 'goals' | 'tasks' | 'notes'
 
@@ -100,8 +96,9 @@ const GOAL_STATUS_TAB_LABELS: Record<GoalStatus | 'all', string> = {
   deferred: 'Deferred',
 }
 
-export function SearchPage({ onNavigate }: Props) {
+export function SearchPage() {
   const { store } = usePlanner()
+  const navigate = useNavigate()
 
   const [query, setQuery] = useState('')
   const [activeTab, setActiveTab] = useState<ResultTab>('all')
@@ -474,7 +471,7 @@ export function SearchPage({ onNavigate }: Props) {
                     key={ev.id}
                     onClick={() => {
                       sessionStorage.setItem('pendingOpenEventId', ev.id)
-                      onNavigate('planner')
+                      navigate('/planner')
                     }}
                     className="w-full text-left rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors"
                     style={{
@@ -530,7 +527,7 @@ export function SearchPage({ onNavigate }: Props) {
                 return (
                   <button
                     key={g.id}
-                    onClick={() => onNavigate('goals')}
+                    onClick={() => navigate('/goals')}
                     className="w-full text-left rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors"
                     style={{
                       background: '#0d1224',
@@ -586,7 +583,7 @@ export function SearchPage({ onNavigate }: Props) {
               {visible.tasks.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => onNavigate('tasks')}
+                  onClick={() => navigate('/tasks')}
                   className="w-full text-left rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors"
                   style={{
                     background: '#0d1224',
@@ -651,7 +648,7 @@ export function SearchPage({ onNavigate }: Props) {
                 return (
                   <button
                     key={n.id}
-                    onClick={() => onNavigate('notes')}
+                    onClick={() => navigate('/notes')}
                     className="w-full text-left rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors"
                     style={{
                       background: '#0d1224',

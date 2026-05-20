@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, CheckSquare, Square, Flag, X, Lock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { usePlanner } from '../context/PlannerContext'
 import { useAuth } from '../context/AuthContext'
 import type { Goal, Milestone, PriorityLevel, GoalStatus } from '../types'
-import type { Page } from '../components/layout/Sidebar'
 import { PRIORITY_COLORS, PRIORITY_LABELS, GOAL_STATUS_LABELS } from '../types'
 
 // ─── Progress bar ─────────────────────────────────────────────────────────────
@@ -235,9 +235,10 @@ function MilestoneRow({
 
 // ─── Goal card ────────────────────────────────────────────────────────────────
 
-function GoalCard({ goal, onNavigate }: { goal: Goal; onNavigate: (p: Page) => void }) {
+function GoalCard({ goal }: { goal: Goal }) {
   const { editGoal, removeGoal, addMilestoneToGoal, editMilestone, removeMilestone, store, toggleTask } = usePlanner()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const canEdit = !goal.userId || goal.userId === user?.id
   const linkedTasks = store.tasks.filter((t) => t.goalId === goal.id)
   const completedLinkedTasks = linkedTasks.filter((t) => t.completed).length
@@ -318,7 +319,7 @@ function GoalCard({ goal, onNavigate }: { goal: Goal; onNavigate: (p: Page) => v
           {linkedTasks.length > 0 && (
             <button
               className="mt-1.5 flex items-center gap-1.5 rounded-lg px-1 py-1 -mx-1 active:bg-white/10 transition-colors"
-              onClick={() => onNavigate('tasks')}
+              onClick={() => navigate('/tasks')}
               title="View linked tasks"
             >
               <Square size={10} className="text-blue-400" />
@@ -513,7 +514,7 @@ function ParetoInsight({ goals }: { goals: Goal[] }) {
 
 // ─── Goals page ───────────────────────────────────────────────────────────────
 
-export function GoalsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+export function GoalsPage() {
   const { store, addGoal, currentYear } = usePlanner()
   const [showModal, setShowModal] = useState(false)
   const [filterQ, setFilterQ] = useState<number | 'all'>('all')
@@ -597,7 +598,7 @@ export function GoalsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
               <p className="text-xs text-slate-600 pl-6">No goals for Q{q}</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {qGoals.map((goal) => <GoalCard key={goal.id} goal={goal} onNavigate={onNavigate} />)}
+                {qGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
               </div>
             )}
           </div>
