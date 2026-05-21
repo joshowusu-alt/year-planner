@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react'
+import { lazy, Suspense, useState, useEffect, useLayoutEffect, useCallback, useRef, type CSSProperties } from 'react'
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { PlannerProvider, usePlanner } from './context/PlannerContext'
@@ -35,6 +35,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ de
 import { ExportModal } from './components/ExportModal'
 import { PrintLayout } from './components/PrintLayout'
 import type { ExportConfig } from './lib/exportIntelligence'
+import { generateStratumPDF } from './lib/pdfExport'
 
 function PageFallback() {
   return (
@@ -52,6 +53,7 @@ function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
   const locationRef = useRef(location)
+  const contentScrollRef = useRef<HTMLDivElement>(null)
 
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -59,6 +61,8 @@ function AppShell() {
   const [showNLInput, setShowNLInput] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportConfig, setExportConfig] = useState<ExportConfig | null>(null)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [pdfProgress, setPdfProgress] = useState({ page: 0, total: 0 })
   const pendingPrintRef = useRef(false)
   const [shareToken, setShareToken] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search)
@@ -69,6 +73,32 @@ function AppShell() {
   useEffect(() => {
     locationRef.current = location
   }, [location])
+
+  const resetMobileScroll = useCallback(() => {
+    const root = contentScrollRef.current
+    root?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+
+    root
+      ?.querySelectorAll<HTMLElement>('[data-route-scroll], .overflow-auto, .overflow-y-auto')
+      .forEach((element) => {
+        element.scrollTop = 0
+        element.scrollLeft = 0
+      })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!isMobile) return
+    resetMobileScroll()
+    const frame = window.requestAnimationFrame(resetMobileScroll)
+    return () => window.cancelAnimationFrame(frame)
+  }, [isMobile, location.pathname, resetMobileScroll])
+
+  useEffect(() => {
+    const handleScrollTopRequest = () => resetMobileScroll()
+    window.addEventListener('stratum:scroll-top', handleScrollTopRequest)
+    return () => window.removeEventListener('stratum:scroll-top', handleScrollTopRequest)
+  }, [resetMobileScroll])
 
   const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key !== '/') return
@@ -91,15 +121,30 @@ function AppShell() {
 
   useEffect(() => {
     if (!exportConfig) return
-    const id = window.setTimeout(() => window.print(), 600)
-    return () => window.clearTimeout(id)
-  }, [exportConfig])
+    setIsGeneratingPDF(true)
+    setPdfProgress({ page: 0, total: 0 })
+    document.body.classList.add('stratum-generating-pdf')
 
-  useEffect(() => {
-    if (!exportConfig) return
-    const cleanup = () => setExportConfig(null)
-    window.addEventListener('afterprint', cleanup)
-    return () => window.removeEventListener('afterprint', cleanup)
+    const id = window.setTimeout(async () => {
+      const { mode, year } = exportConfig
+      const filename = `STRATUM-${mode === 'forward-planner' ? 'Planner' : 'Report'}-${year}.pdf`
+      try {
+        await generateStratumPDF('stratum-print-layout', filename, {
+          onProgress: (p) => setPdfProgress(p),
+        })
+      } catch (err) {
+        console.error('[STRATUM] PDF generation failed:', err)
+      } finally {
+        setIsGeneratingPDF(false)
+        document.body.classList.remove('stratum-generating-pdf')
+        setExportConfig(null)
+      }
+    }, 400)
+
+    return () => {
+      window.clearTimeout(id)
+      document.body.classList.remove('stratum-generating-pdf')
+    }
   }, [exportConfig])
 
   useEffect(() => {
@@ -205,7 +250,11 @@ function AppShell() {
             />
           )}
 
-          <div className={isMobile ? 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-20' : 'flex-1 min-h-0 overflow-hidden'}>
+          <div
+            ref={contentScrollRef}
+            data-route-scroll
+            className={isMobile ? 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-20' : 'flex-1 min-h-0 overflow-hidden'}
+          >
             <Suspense fallback={<PageFallback />}>
               <Routes>
                 <Route path="/" element={<Navigate to="/planner" replace />} />
@@ -275,6 +324,31 @@ function AppShell() {
           />
         )}
       </Suspense>
+
+      {/* PDF generation overlay — covers screen while html2canvas captures pages */}
+      {isGeneratingPDF && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(10, 14, 26, 0.97)',
+          zIndex: 9999, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 16,
+        } as CSSProperties}>
+          <div style={{
+            width: 40, height: 40,
+            border: '3px solid rgba(212, 175, 55, 0.25)',
+            borderTopColor: '#d4af37',
+            borderRadius: '50%',
+            animation: 'stratum-spin 0.9s linear infinite',
+          }} />
+          <p style={{ color: '#fff', fontSize: 14, fontWeight: 600, letterSpacing: '0.04em', margin: 0 }}>
+            Generating PDF…
+          </p>
+          {pdfProgress.total > 0 && (
+            <p style={{ color: '#64748b', fontSize: 12, margin: 0 }}>
+              Page {pdfProgress.page} of {pdfProgress.total}
+            </p>
+          )}
+        </div>
+      )}
     </UndoContext.Provider>
   )
 }

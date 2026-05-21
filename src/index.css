@@ -85,10 +85,28 @@ html {
   outline-offset: 2px;
 }
 
-/* Print / PDF styles */
+/* PDF spinner keyframe */
+@keyframes stratum-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 /* Print layout: hidden on screen, shown during export print */
 #stratum-print-layout {
   display: none;
+}
+
+/* During programmatic PDF generation: make print layout visible for html2canvas.
+   The loading overlay (z-index 9999) covers it from the user. */
+body.stratum-generating-pdf #stratum-print-layout {
+  display: block !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+body.stratum-generating-pdf #app-shell {
+  display: none !important;
 }
 
 @media print {
@@ -151,8 +169,7 @@ html {
   }
 
   @page {
-    size: A4 landscape;
-    margin: 8mm;
+    margin: 0;
   }
 }
 

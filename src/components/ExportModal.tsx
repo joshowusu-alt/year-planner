@@ -604,7 +604,7 @@ export function ExportModal({ onClose, onExport }: Props) {
           <div className="flex-1 min-w-0 px-1">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Export action</p>
             <p className="text-sm truncate" style={{ color: '#94a3b8' }}>
-              Generates the {mode === 'forward-planner' ? 'forward planner' : 'executive report'}, then opens the browser print dialog for PDF save.
+              Generates the {mode === 'forward-planner' ? 'forward planner' : 'executive report'} and downloads it directly as a PDF — no browser dialog required.
             </p>
           </div>
 
