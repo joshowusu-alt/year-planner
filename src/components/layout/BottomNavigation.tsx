@@ -13,6 +13,14 @@ export function BottomNavigation() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
+  function handleNavigate(path: string) {
+    if (pathname === path) {
+      window.dispatchEvent(new CustomEvent('stratum:scroll-top'))
+      return
+    }
+    navigate(path)
+  }
+
   return (
     <nav
       role="navigation"
@@ -28,7 +36,7 @@ export function BottomNavigation() {
         return (
           <button
             key={path}
-            onClick={() => navigate(path)}
+            onClick={() => handleNavigate(path)}
             aria-current={active ? 'page' : undefined}
             aria-label={label}
             className="focus-ring flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-14 active:bg-white/5 transition-colors"
