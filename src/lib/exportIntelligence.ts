@@ -5,6 +5,7 @@ import { getCategoryStyle, isRecurringOnDate, MONTH_NAMES, MONTH_SHORT, RECURREN
 export type ExportMode = 'executive-report' | 'forward-planner'
 export type ExportDensity = 'compact' | 'comfortable'
 export type ExportColourMode = 'full' | 'economy'
+export type ForwardPlannerLayout = 'quarter-overview' | 'monthly-detail' | 'both'
 
 export interface ExportOptions {
   includeGoals: boolean
@@ -16,6 +17,7 @@ export interface ExportOptions {
   pageIds?: string[]
   density: ExportDensity
   colourMode: ExportColourMode
+  forwardPlannerLayout?: ForwardPlannerLayout
 }
 
 export interface ExportConfig {
@@ -112,17 +114,27 @@ export function getEventsForDate(events: PlannerEvent[], dateStr: string): Plann
     .sort((a, b) => (a.startTime ?? '99:99').localeCompare(b.startTime ?? '99:99') || a.title.localeCompare(b.title))
 }
 
-function abbreviateTitle(title: string): string {
-  const cleaned = title.replace(/\s+/g, ' ').trim()
-  if (cleaned.length <= 24) return cleaned
-  const words = cleaned.split(' ')
-  if (words.length > 2) {
-    const abbreviated = words
-      .map((word, index) => (index < 2 ? word : `${word.slice(0, 1)}.`))
-      .join(' ')
-    if (abbreviated.length <= 24) return abbreviated
+/**
+ * Truncates an event title to fit within maxLen characters, breaking at a
+ * word boundary where possible.  Used for compact print layouts.
+ */
+export function getShortEventTitle(title: string, maxLen: number): string {
+  const t = title.replace(/\s+/g, ' ').trim()
+  if (t.length <= maxLen) return t
+  const words = t.split(' ')
+  let result = ''
+  for (const word of words) {
+    const next = result ? `${result} ${word}` : word
+    if (next.length > maxLen) break
+    result = next
   }
-  return `${cleaned.slice(0, 21).trim()}...`
+  // Use word-boundary result if it fills at least 55% of the budget
+  if (result.length >= Math.ceil(maxLen * 0.55)) return result
+  return `${t.slice(0, maxLen - 1).trimEnd()}…`
+}
+
+function abbreviateTitle(title: string): string {
+  return getShortEventTitle(title, 24)
 }
 
 function formatTime(event: PlannerEvent): string {
@@ -284,5 +296,6 @@ export function defaultExportOptions(): ExportOptions {
     includeAppendix: true,
     density: 'compact',
     colourMode: 'full',
+    forwardPlannerLayout: 'quarter-overview',
   }
 }

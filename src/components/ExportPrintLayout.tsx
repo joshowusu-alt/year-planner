@@ -6,6 +6,7 @@ import { GOAL_STATUS_LABELS, MONTH_SHORT, PRIORITY_LABELS } from '../types'
 import {
   buildYearIntelligence,
   defaultExportOptions,
+  getShortEventTitle,
   type ExportConfig,
   type MonthSummary,
   type YearIntelligence,
@@ -158,6 +159,311 @@ function CategoryLegend({ items }: { items: Array<{ category: EventCategoryDef; 
   )
 }
 
+// ─── Quarter overview components ─────────────────────────────────────────────
+const Q_ROW_H = 18  // row height for quarterly overview columns
+
+const QUARTER_FOCUS_LABELS = ['Foundation', 'Execution', 'Expansion', 'Finish']
+
+function QuarterMonthColumn({ month, accent }: { month: MonthSummary; accent: string }) {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      border: `1px solid ${LINE}`,
+      borderRadius: 7,
+      overflow: 'hidden',
+    }}>
+      {/* Month header */}
+      <div style={{
+        background: NAVY,
+        padding: '5px 8px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexShrink: 0,
+      }}>
+        <span style={{
+          fontSize: 10.5,
+          fontWeight: 900,
+          color: accent,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+        }}>
+          {month.name}
+        </span>
+        <span style={{ fontSize: 7, color: '#475569' }}>{month.eventCount} events</span>
+      </div>
+
+      {/* Month theme — always rendered so all 3 columns stay aligned */}
+      <div style={{
+        padding: '0 8px',
+        background: month.theme ? `${accent}0d` : LIGHT,
+        borderBottom: `1px solid ${LINE}`,
+        fontSize: 7,
+        color: month.theme ? INK : '#94a3b8',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        flexShrink: 0,
+        height: 18,
+        display: 'flex',
+        alignItems: 'center',
+        fontStyle: month.theme ? 'normal' : 'italic',
+      }}>
+        {month.theme || 'Add a monthly theme'}
+      </div>
+
+      {/* Column headers */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '32px 20px 1fr',
+        background: LIGHT,
+        borderBottom: `1px solid ${LINE}`,
+        flexShrink: 0,
+      }}>
+        {(['DAY', '#', 'EVENTS'] as const).map((h) => (
+          <span key={h} style={{
+            padding: '3px 4px',
+            fontSize: 6,
+            fontWeight: 900,
+            color: SOFT,
+            letterSpacing: '0.12em',
+          }}>{h}</span>
+        ))}
+      </div>
+
+      {/* Day rows */}
+      <div style={{ overflow: 'hidden', flex: 1 }}>
+        {month.days.map((day) => {
+          const isToday = day.dateStr === TODAY
+          const total = day.events.length
+          const first = day.events[0]
+          const second = day.events[1]
+          const showTwo = total === 2
+          const overflowCount = total > 2 ? total - 1 : 0
+
+          return (
+            <div
+              key={day.dateStr}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '32px 20px 1fr',
+                height: Q_ROW_H,
+                borderBottom: '1px solid #f0f4f8',
+                overflow: 'hidden',
+                background: isToday ? '#fff7d6' : day.weekend ? '#fffaf0' : '#fff',
+              }}
+            >
+              <span style={{
+                padding: '0 4px',
+                fontSize: 6.5,
+                fontWeight: 700,
+                alignSelf: 'center',
+                color: day.weekend ? '#d97706' : SOFT,
+              }}>
+                {day.weekday}
+              </span>
+              <span style={{
+                padding: '0 2px',
+                fontSize: 8,
+                fontWeight: 900,
+                alignSelf: 'center',
+                color: isToday ? '#b45309' : INK,
+              }}>
+                {day.day}
+              </span>
+              <div style={{
+                padding: '0 5px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                minWidth: 0,
+                overflow: 'hidden',
+              }}>
+                {total === 0 ? null : (
+                  <>
+                    {first && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 3,
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        flex: showTwo ? '1 1 0' : '1 1 auto',
+                      }}>
+                        <span style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: '50%',
+                          background: first.color,
+                          flexShrink: 0,
+                        }} />
+                        <span style={{
+                          fontSize: 7,
+                          color: INK,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          lineHeight: 1,
+                        }}>
+                          {getShortEventTitle(first.title, showTwo ? 16 : overflowCount > 0 ? 22 : 30)}
+                        </span>
+                      </div>
+                    )}
+                    {showTwo && second && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 3,
+                        minWidth: 0,
+                        overflow: 'hidden',
+                        flex: '1 1 0',
+                      }}>
+                        <span style={{
+                          width: 5,
+                          height: 5,
+                          borderRadius: '50%',
+                          background: second.color,
+                          flexShrink: 0,
+                        }} />
+                        <span style={{
+                          fontSize: 7,
+                          color: INK,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          lineHeight: 1,
+                        }}>
+                          {getShortEventTitle(second.title, 16)}
+                        </span>
+                      </div>
+                    )}
+                    {overflowCount > 0 && (
+                      <span style={{
+                        fontSize: 6.5,
+                        color: '#b45309',
+                        fontWeight: 900,
+                        flexShrink: 0,
+                      }}>
+                        +{overflowCount}
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function QuarterOverviewPage({
+  quarterNum,
+  months,
+  accent,
+  year,
+  coverage,
+  showLegend,
+  isLast,
+}: {
+  quarterNum: 1 | 2 | 3 | 4
+  months: MonthSummary[]
+  accent: string
+  year: number
+  coverage: string
+  showLegend: boolean
+  isLast: boolean
+}) {
+  const allEvents = months.flatMap((m) => m.days.flatMap((d) => d.events))
+  const totalEvents = allEvents.length
+  const monthNames = months.map((m) => m.name.toUpperCase()).join(' / ')
+
+  // Build category legend from all events in this quarter
+  const catMap = new Map<string, { category: EventCategoryDef; count: number }>()
+  allEvents.forEach((e) => {
+    const existing = catMap.get(e.category.id)
+    if (existing) existing.count++
+    else catMap.set(e.category.id, { category: e.category, count: 1 })
+  })
+  const legendItems = [...catMap.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 9)
+    .map(({ category, count }) => ({
+      category,
+      count,
+      share: totalEvents > 0 ? Math.round((count / totalEvents) * 100) : 0,
+    }))
+
+  return (
+    <Page orientation="landscape" isLast={isLast}>
+      <DocHeader title="Forward Planner" year={year} accent={accent} />
+
+      {/* Quarter heading row */}
+      <div style={{
+        marginTop: 7,
+        marginBottom: 8,
+        flexShrink: 0,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+      }}>
+        <div>
+          <div style={{
+            fontSize: 7,
+            fontWeight: 900,
+            letterSpacing: '0.18em',
+            color: accent,
+            textTransform: 'uppercase',
+            marginBottom: 3,
+          }}>
+            Q{quarterNum} · {QUARTER_FOCUS_LABELS[quarterNum - 1]} · {totalEvents} event{totalEvents !== 1 ? 's' : ''}
+          </div>
+          <h2 style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 900,
+            color: NAVY,
+            lineHeight: 1,
+            letterSpacing: '0.03em',
+          }}>
+            {monthNames}
+          </h2>
+        </div>
+        <div style={{ fontSize: 7, color: MUTED, textAlign: 'right', lineHeight: 1.5 }}>
+          <div>Three-month planning block</div>
+          <div style={{ fontWeight: 700, color: INK }}>{year}</div>
+        </div>
+      </div>
+
+      {/* Category legend */}
+      {showLegend && legendItems.length > 0 && (
+        <div style={{ marginBottom: 8, flexShrink: 0 }}>
+          <CategoryLegend items={legendItems} />
+        </div>
+      )}
+
+      {/* Three month columns — fill remaining page height */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${months.length}, 1fr)`,
+        gap: 10,
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+      }}>
+        {months.map((month) => (
+          <QuarterMonthColumn key={month.month} month={month} accent={accent} />
+        ))}
+      </div>
+
+      <DocFooter pageName={`Q${quarterNum} · ${coverage}`} accent={accent} />
+    </Page>
+  )
+}
+
+// ─── Goal card ─────────────────────────────────────────────────────────────────
 function GoalCard({ goal }: { goal: Goal }) {
   return (
     <div style={{ border: '1px solid #e5e7eb', borderRadius: 7, padding: '7px 9px' }}>
@@ -518,7 +824,7 @@ function CoverLandscape({ intel, accent, orgName, title, year, coverage }: {
 }
 
 // ─── Landscape month planner page ────────────────────────────────────────────
-const MONTH_ROW_H = 19
+const MONTH_ROW_H = 20
 
 function MonthPlannerPage({ month, accent, year, coverage, showLegend, isLast }: {
   month: MonthSummary
@@ -576,8 +882,12 @@ function MonthPlannerPage({ month, accent, year, coverage, showLegend, isLast }:
         <div style={{ overflow: 'hidden', flex: 1 }}>
           {month.days.map((day) => {
             const isToday = day.dateStr === TODAY
-            const visibleEvents = day.events.slice(0, 2)
-            const overflow = Math.max(0, day.events.length - visibleEvents.length)
+            const total = day.events.length
+            // Monthly detail: show up to 3 events then "+N more"
+            const MAX_VISIBLE = 3
+            const visibleEvents = day.events.slice(0, MAX_VISIBLE)
+            const overflow = Math.max(0, total - MAX_VISIBLE)
+            const maxTitleLen = visibleEvents.length === 1 ? 52 : visibleEvents.length === 2 ? 36 : 22
 
             return (
               <div key={day.dateStr} style={{
@@ -592,31 +902,30 @@ function MonthPlannerPage({ month, accent, year, coverage, showLegend, isLast }:
                     color: day.weekend ? '#d97706' : SOFT }}>{day.weekday}</span>
                 <span style={{ padding: '4px 4px', fontSize: 9, fontWeight: 900, alignSelf: 'center',
                     color: isToday ? '#b45309' : INK }}>{day.day}</span>
-                <div style={{ padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 10,
+                <div style={{ padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 8,
                     minWidth: 0, overflow: 'hidden' }}>
-                  {visibleEvents.length === 0 ? (
-                    <span style={{ fontSize: 8, color: '#cbd5e1' }}> </span>
-                  ) : (
-                    visibleEvents.map((event) => (
+                  {visibleEvents.length === 0 ? null : (
+                    visibleEvents.map((event, idx) => (
                       <div key={`${event.event.id}-${day.dateStr}`} style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 5,
+                        gap: 4,
                         minWidth: 0,
-                        maxWidth: visibleEvents.length > 1 ? '48%' : '86%',
+                        flex: `1 1 0`,
                         overflow: 'hidden',
                       }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: event.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 8.6, color: INK, whiteSpace: 'nowrap', overflow: 'hidden',
+                        <span style={{ fontSize: idx === 0 && visibleEvents.length === 1 ? 8.5 : 8,
+                            color: INK, whiteSpace: 'nowrap', overflow: 'hidden',
                             textOverflow: 'ellipsis', lineHeight: 1.15 }}>
                           {event.timeLabel && <span style={{ color: MUTED, fontSize: 7.5, marginRight: 3 }}>{event.timeLabel}</span>}
-                          {event.title}
+                          {getShortEventTitle(event.title, maxTitleLen)}
                         </span>
                       </div>
                     ))
                   )}
                   {overflow > 0 && (
-                    <span style={{ fontSize: 8, color: '#b45309', fontWeight: 900, flexShrink: 0 }}>+{overflow} more</span>
+                    <span style={{ fontSize: 7.5, color: '#b45309', fontWeight: 900, flexShrink: 0 }}>+{overflow}</span>
                   )}
                 </div>
               </div>
@@ -693,6 +1002,49 @@ function ForwardPlanner({ intel, accent, orgName, title, year, coverage, options
 }) {
   const selectedPages = options.pageIds?.length ? new Set(options.pageIds) : null
   const enabled = (id: string) => !selectedPages || selectedPages.has(id)
+  const layout = options.forwardPlannerLayout ?? 'quarter-overview'
+
+  // Group selected months into quarters
+  const quarterGroups = ([1, 2, 3, 4] as const)
+    .map((q) => ({
+      q,
+      months: intel.months.filter((m) => Math.ceil(m.month / 3) === q),
+    }))
+    .filter((qg) => qg.months.length > 0)
+
+  const quarterPages: RenderedPage[] = layout !== 'monthly-detail'
+    ? quarterGroups.map((qg) => ({
+        id: `quarter-${qg.q}`,
+        render: (isLast: boolean) => (
+          <QuarterOverviewPage
+            quarterNum={qg.q}
+            months={qg.months}
+            accent={accent}
+            year={year}
+            coverage={coverage}
+            showLegend={options.includeLegend}
+            isLast={isLast && layout === 'quarter-overview'}
+          />
+        ),
+      }))
+    : []
+
+  const monthlyPages: RenderedPage[] = layout !== 'quarter-overview'
+    ? intel.months.map((month) => ({
+        id: `month-${month.month}`,
+        render: (isLast: boolean) => (
+          <MonthPlannerPage
+            month={month}
+            accent={accent}
+            year={year}
+            coverage={coverage}
+            showLegend={options.includeLegend}
+            isLast={isLast}
+          />
+        ),
+      }))
+    : []
+
   const pages: RenderedPage[] = [
     {
       id: 'cover',
@@ -702,12 +1054,8 @@ function ForwardPlanner({ intel, accent, orgName, title, year, coverage, options
       id: 'goals',
       render: () => <StrategicGoalsPage intel={intel} accent={accent} year={year} coverage={coverage} orientation="landscape" />,
     },
-    ...intel.months.map((month) => ({
-      id: `month-${month.month}`,
-      render: (isLast: boolean) => <MonthPlannerPage month={month} accent={accent} year={year} coverage={coverage}
-        showLegend={options.includeLegend}
-        isLast={isLast} />,
-    })),
+    ...quarterPages,
+    ...monthlyPages,
   ].filter((page) => enabled(page.id))
 
   return (

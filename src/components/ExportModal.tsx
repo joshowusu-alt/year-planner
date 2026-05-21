@@ -14,6 +14,8 @@ import { usePlanner } from '../context/PlannerContext'
 import { MONTH_SHORT } from '../types'
 import { defaultExportOptions, type ExportConfig, type ExportMode, type ExportOptions } from '../lib/exportIntelligence'
 
+type ForwardPlannerLayout = NonNullable<ExportOptions['forwardPlannerLayout']>
+
 const MONTH_NAMES_FULL = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -88,6 +90,18 @@ export function ExportModal({ onClose, onExport }: Props) {
     }))
 
     if (mode === 'forward-planner') {
+      const layout: ForwardPlannerLayout = options.forwardPlannerLayout ?? 'quarter-overview'
+
+      const quarterItems = QUARTERS
+        .map((q, idx) => ({ q, idx }))
+        .filter(({ q }) => q.months.some((m) => selected.has(m)))
+        .map(({ q, idx }) => ({
+          id: `quarter-${idx + 1}`,
+          title: `Q${idx + 1} · ${q.title} — Quarter Overview`,
+          description: `Three-month landscape spread: ${q.months.map((m) => MONTH_NAMES_FULL[m - 1]).join(', ')}.`,
+          orientation: 'Landscape' as const,
+        }))
+
       return [
         {
           id: 'cover',
@@ -101,7 +115,8 @@ export function ExportModal({ onClose, onExport }: Props) {
           description: 'Goal framework for the selected year.',
           orientation: 'Landscape',
         },
-        ...monthItems,
+        ...(layout !== 'monthly-detail' ? quarterItems : []),
+        ...(layout !== 'quarter-overview' ? monthItems : []),
       ]
     }
 
@@ -132,7 +147,7 @@ export function ExportModal({ onClose, onExport }: Props) {
       },
       ...(options.includeAppendix ? monthItems : []),
     ]
-  }, [mode, monthSelectionKey, options.includeAppendix])
+  }, [mode, monthSelectionKey, options.includeAppendix, options.forwardPlannerLayout, selected])
   const selectedDocumentPages = documentPages.filter((page) => selectedPageIds.has(page.id))
   const totalPages = selectedDocumentPages.length
 
@@ -359,6 +374,38 @@ export function ExportModal({ onClose, onExport }: Props) {
                   })}
                 </div>
               </section>
+
+              {mode === 'forward-planner' && (
+                <section className="rounded-[28px] p-5 sm:p-6" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+                  <div className="mb-4">
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Forward planner layout</p>
+                    <h3 className="text-lg font-black text-white mt-1">Choose the planning format</h3>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-3">
+                    {([
+                      ['quarter-overview', 'Quarter Overview', 'A4 landscape · 3 months per page, full-width columns. Best for at-a-glance planning.'],
+                      ['monthly-detail', 'Monthly Detail', 'A4 landscape · One full-page month per sheet. Best for detailed daily review.'],
+                      ['both', 'Both Formats', 'Quarter overview pages followed by monthly detail sheets. Complete planning pack.'],
+                    ] as const).map(([id, label, caption]) => {
+                      const active = (options.forwardPlannerLayout ?? 'quarter-overview') === id
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => patchOptions({ forwardPlannerLayout: id })}
+                          className="rounded-2xl p-4 text-left transition-all"
+                          style={{
+                            background: active ? 'rgba(212,175,55,0.14)' : '#08101f',
+                            border: active ? '1px solid rgba(212,175,55,0.34)' : '1px solid #243447',
+                          }}
+                        >
+                          <p className="text-sm font-black" style={{ color: active ? '#fde68a' : '#f8fafc' }}>{label}</p>
+                          <p className="text-xs mt-1" style={{ color: '#94a3b8' }}>{caption}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
 
               <section className="rounded-[28px] p-5 sm:p-6" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -640,8 +687,20 @@ export function ExportModal({ onClose, onExport }: Props) {
                     <div className="flex items-start gap-3">
                       <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black" style={{ background: 'rgba(96,165,250,0.12)', color: '#93c5fd' }}>2</span>
                       <div>
-                        <p className="text-sm font-bold text-white">{mode === 'forward-planner' ? 'Readable month sheets' : 'Report analysis'}</p>
-                        <p className="text-xs" style={{ color: '#94a3b8' }}>{mode === 'forward-planner' ? 'One selected month per landscape page for legible daily planning.' : 'Year, quarter, category, and recurring rhythm intelligence.'}</p>
+                        <p className="text-sm font-bold text-white">
+                          {mode === 'forward-planner'
+                            ? (options.forwardPlannerLayout === 'monthly-detail' ? 'Monthly detail sheets' : options.forwardPlannerLayout === 'both' ? 'Quarter overview + monthly detail' : 'Quarter overview pages')
+                            : 'Report analysis'}
+                        </p>
+                        <p className="text-xs" style={{ color: '#94a3b8' }}>
+                          {mode === 'forward-planner'
+                            ? (options.forwardPlannerLayout === 'monthly-detail'
+                                ? 'One full-page landscape sheet per month for detailed daily review.'
+                                : options.forwardPlannerLayout === 'both'
+                                ? 'Full A4 landscape quarterly spreads, then one page per month for detail.'
+                                : 'Full A4 landscape pages — 3 months across the full width per quarter.')
+                            : 'Year, quarter, category, and recurring rhythm intelligence.'}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
