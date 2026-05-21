@@ -605,10 +605,38 @@ export function GoalsPage() {
         ))}
 
         {goals.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Target size={48} className="text-slate-700 mb-3" />
-            <p className="text-slate-500 font-semibold">No goals yet</p>
-            <p className="text-xs text-slate-600 mt-1">Click "New Goal" to get started</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center px-6 max-w-sm mx-auto">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(212,175,55,0.1)' }}>
+              <Target size={32} style={{ color: '#d4af37' }} />
+            </div>
+            <p className="text-base font-black text-white mb-1">Set your first goal</p>
+            <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+              Goals drive your year. Start with your annual vision, break it into quarters, then track milestones.
+            </p>
+            <div className="space-y-2 text-left w-full">
+              {[
+                { step: '1', label: 'Define your year vision', hint: 'What does success look like in 12 months?' },
+                { step: '2', label: 'Set 3–5 vital goals', hint: 'Focus beats breadth. Choose fewer, go deeper.' },
+                { step: '3', label: 'Add milestones + due dates', hint: 'Break big goals into trackable checkpoints.' },
+              ].map(({ step, label, hint }) => (
+                <div key={step} className="rounded-lg p-3 flex items-start gap-3" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-black mt-0.5" style={{ background: 'rgba(212,175,55,0.15)', color: '#d4af37' }}>
+                    {step}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">{label}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{hint}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowModal(true)}
+              className="mt-6 px-5 py-2.5 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
+              style={{ background: '#d4af37', color: '#0a0e1a' }}
+            >
+              + Add First Goal
+            </button>
           </div>
         )}
       </div>

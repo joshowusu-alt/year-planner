@@ -363,15 +363,24 @@ export function NotesPage() {
           <NoteCard key={note.id} note={note} />
         ))}
         {sorted.length === 0 && (
-          <div
-            className="col-span-full flex flex-col items-center justify-center py-16 text-center"
-            style={{ color: '#475569' }}
-          >
-            <FileText size={40} className="mb-3 opacity-30" />
-            <p className="font-semibold text-sm">No notes yet</p>
-            <p className="text-xs mt-1 opacity-60">
-              {search ? `No notes match "${search}"` : 'Capture your first thought to get started'}
+          <div className="col-span-full flex flex-col items-center justify-center py-16 text-center px-6">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(212,175,55,0.1)' }}>
+              <FileText size={28} style={{ color: '#d4af37' }} />
+            </div>
+            <p className="text-sm font-black text-white mb-1">
+              {search ? 'No notes match that search' : 'No notes yet'}
             </p>
+            <p className="text-xs text-slate-500 mb-4">
+              {search ? `Try a different search term.` : 'Capture insights, decisions, and reflections as you plan.'}
+            </p>
+            {!search && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
+                style={{ background: '#d4af37', color: '#0a0e1a' }}>
+                + Add First Note
+              </button>
+            )}
           </div>
         )}
       </div>

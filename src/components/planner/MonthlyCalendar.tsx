@@ -59,10 +59,11 @@ function DraggableEventChip({ event, catStyle, dateStr, onEdit }: DraggableEvent
       {...attributes}
       {...listeners}
       aria-label={event.title}
-      className="text-left text-xs px-1 py-0.5 rounded truncate leading-tight w-full cursor-grab active:cursor-grabbing"
+      className="text-left text-xs px-1.5 py-0.5 rounded truncate leading-tight w-full cursor-grab active:cursor-grabbing"
       style={{
         background: catStyle.bgColor,
         color: catStyle.color,
+        borderLeft: `2px solid ${catStyle.color}`,
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.4 : 1,
         touchAction: 'none',
@@ -124,9 +125,14 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
           return isMobile ? (
             <button
               key={ev.id}
-              className="text-left px-0.5 py-px rounded truncate leading-tight w-full"
+              className="text-left px-1 py-px rounded truncate leading-tight w-full"
               aria-label={ev.title}
-              style={{ background: catStyle.bgColor, color: catStyle.color, fontSize: '0.6rem' }}
+              style={{
+                background: catStyle.bgColor,
+                color: catStyle.color,
+                borderLeft: `2px solid ${catStyle.color}`,
+                fontSize: '0.6rem',
+              }}
               onClick={(e) => { e.stopPropagation(); onEditEvent(ev) }}
             >
               {ev.title}
@@ -143,7 +149,7 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
         })}
         {events.length > (isMobile ? 2 : 3) && (
           <span className="px-0.5 leading-tight" style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 600 }}>
-            +{events.length - (isMobile ? 2 : 3)}
+            +{events.length - (isMobile ? 2 : 3)} more
           </span>
         )}
       </div>

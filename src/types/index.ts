@@ -20,10 +20,10 @@ export function getCategoryStyle(
 }
 
 export const DEFAULT_CATEGORIES: EventCategoryDef[] = [
-  { id: 'meeting',  label: 'Meetings',       color: '#60a5fa', bgColor: 'rgba(96,165,250,0.15)'  },
-  { id: 'personal', label: 'Personal',       color: '#34d399', bgColor: 'rgba(52,211,153,0.12)'  },
-  { id: 'holiday',  label: 'Public Holiday', color: '#f97316', bgColor: 'rgba(249,115,22,0.15)'  },
-  { id: 'general',  label: 'General',        color: '#a78bfa', bgColor: 'rgba(167,139,250,0.12)' },
+  { id: 'meeting',  label: 'Meetings',       color: '#7eb8d4', bgColor: 'rgba(126,184,212,0.13)' },
+  { id: 'personal', label: 'Personal',       color: '#5aaa8c', bgColor: 'rgba(90,170,140,0.12)'  },
+  { id: 'holiday',  label: 'Public Holiday', color: '#c8956a', bgColor: 'rgba(200,149,106,0.13)' },
+  { id: 'general',  label: 'General',        color: '#9b8ec4', bgColor: 'rgba(155,142,196,0.12)' },
 ]
 
 // ─── Recurrence ───────────────────────────────────────────────────────────────
@@ -237,6 +237,7 @@ export interface PlannerStore {
   plannerTitle: string
   accentColor: string
   logoUrl?: string
+  yearTheme?: string               // optional high-level year vision/theme
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

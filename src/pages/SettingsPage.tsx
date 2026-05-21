@@ -28,6 +28,7 @@ export function SettingsPage() {
   const [orgName, setOrgName] = useState(store.organizationName)
   const [title, setTitle] = useState(store.plannerTitle)
   const [accent, setAccent] = useState(store.accentColor)
+  const [yearTheme, setYearTheme] = useState(store.yearTheme ?? '')
   const [saved, setSaved] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -118,7 +119,7 @@ export function SettingsPage() {
 
   function handleSettingsSave(e: FormEvent) {
     e.preventDefault()
-    updateSettings({ organizationName: orgName, plannerTitle: title, accentColor: accent })
+    updateSettings({ organizationName: orgName, plannerTitle: title, accentColor: accent, yearTheme: yearTheme.trim() || undefined })
     Object.entries(themes).forEach(([month, theme]) => {
       setMonthTheme(Number(month), currentYear, theme)
     })
@@ -163,63 +164,38 @@ export function SettingsPage() {
       </h2>
 
       <form onSubmit={handleSettingsSave} className="space-y-4">
-        {/* ── Organisation ─────────────────────────────────────────────── */}
-        <section
-          className="rounded-xl p-4 space-y-3"
-          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
-        >
-          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
-            Organisation
-          </h3>
+
+        {/* ── 1. Identity ─────────────────────────────────────────────── */}
+        <section className="rounded-xl p-4 space-y-3" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Identity</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">
-                Org Name
-              </label>
-              <input
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
+              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Organisation</label>
+              <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Your organisation…"
                 className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-                style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-              />
+                style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">
-                Planner Title
-              </label>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Planner Title</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="STRATUM 2026…"
                 className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-                style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-              />
+                style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }} />
             </div>
           </div>
-
           <div className="flex items-center gap-4 flex-wrap">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">
-                Accent
-              </label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Accent Colour</label>
               <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={accent}
-                  onChange={(e) => setAccent(e.target.value)}
-                  className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent"
-                />
+                <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)}
+                  className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
                 <span className="text-xs font-mono text-slate-400">{accent}</span>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">
-                Logo
-              </label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Logo</label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <div
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors hover:bg-white/5"
-                  style={{ border: '1px solid #243447', color: logoUploading ? '#d4af37' : '#94a3b8' }}
-                >
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors hover:bg-white/5"
+                  style={{ border: '1px solid #243447', color: logoUploading ? '#d4af37' : '#94a3b8' }}>
                   <Upload size={12} className={logoUploading ? 'animate-spin' : ''} />
                   {logoUploading ? 'Uploading…' : 'Upload'}
                 </div>
@@ -227,104 +203,87 @@ export function SettingsPage() {
               </label>
             </div>
             {store.logoUrl && (
-              <img
-                src={store.logoUrl}
-                alt="Logo"
-                className="h-10 w-auto object-contain rounded"
-              />
+              <img src={store.logoUrl} alt="Logo" className="h-10 w-auto object-contain rounded" />
             )}
           </div>
         </section>
 
-        {/* ── Month Themes ─────────────────────────────────────────────── */}
-        <section
-          className="rounded-xl p-4"
-          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
-        >
-          <h3 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: '#94a3b8' }}>
-            Month Themes
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {MONTH_NAMES.map((name, i) => {
-              const month = i + 1
-              return (
-                <div key={month} className="flex items-center gap-2">
-                  <span
-                    className="text-xs font-semibold uppercase tracking-wider w-20 shrink-0"
-                    style={{ color: '#d4af37' }}
-                  >
-                    {name}
-                  </span>
-                  <input
-                    value={themes[month] ?? ''}
-                    onChange={(e) =>
-                      setThemes((prev) => ({ ...prev, [month]: e.target.value }))
-                    }
-                    placeholder="Theme or label…"
-                    className="flex-1 px-2 py-1 rounded text-xs focus:outline-none"
-                    style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-                  />
-                </div>
-              )
-            })}
+        {/* ── 2. Planning Language ─────────────────────────────────────── */}
+        <section className="rounded-xl p-4 space-y-4" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Planning Language</h3>
+
+          {/* Year Theme */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Year Theme / Vision</label>
+            <input
+              value={yearTheme}
+              onChange={(e) => setYearTheme(e.target.value)}
+              placeholder={`What frames ${currentYear} for you? e.g. "Year of Foundations" or "Build, grow, ship"`}
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+            />
+            <p className="text-xs text-slate-600 mt-1">Shown on the Dashboard and in exports as a guiding statement for the year.</p>
+          </div>
+
+          {/* Month Themes */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Month Themes</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {MONTH_NAMES.map((name, i) => {
+                const month = i + 1
+                return (
+                  <div key={month} className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider w-20 shrink-0" style={{ color: '#d4af37' }}>
+                      {name}
+                    </span>
+                    <input
+                      value={themes[month] ?? ''}
+                      onChange={(e) => setThemes((prev) => ({ ...prev, [month]: e.target.value }))}
+                      placeholder="Theme or focus…"
+                      className="flex-1 px-2 py-1 rounded text-xs focus:outline-none"
+                      style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+                    />
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </section>
 
-        {/* ── Event Categories ─────────────────────────────────────────── */}
-        <section
-          className="rounded-xl p-4"
-          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
-        >
+        {/* ── 3. Event Categories ──────────────────────────────────────── */}
+        <section className="rounded-xl p-4" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
-              Event Categories
-            </h3>
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm('Reset to default categories? Your current categories will be replaced.')) {
-                  resetCategories()
-                }
-              }}
+            <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Event Categories</h3>
+            <button type="button"
+              onClick={() => { if (confirm('Reset to default categories?')) resetCategories() }}
               className="text-xs font-semibold px-2 py-1 rounded-lg hover:bg-white/5 transition-colors"
-              style={{ color: '#94a3b8', border: '1px solid #243447' }}
-            >
+              style={{ color: '#94a3b8', border: '1px solid #243447' }}>
               Restore Defaults
             </button>
           </div>
-
-          <div className="space-y-1.5 mb-3">
+          <div className="space-y-1.5 mb-4">
             {store.categories.map((cat) => {
               const isDefault = DEFAULT_CATEGORY_IDS.has(cat.id)
               return (
                 <div key={cat.id} className="flex items-center gap-1">
                   {editingCatId === cat.id ? (
-                    <EditCategoryRow
-                      cat={cat}
+                    <EditCategoryRow cat={cat}
                       onSave={(patch) => { updateCategory(cat.id, patch); setEditingCatId(null) }}
-                      onCancel={() => setEditingCatId(null)}
-                    />
+                      onCancel={() => setEditingCatId(null)} />
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        onClick={() => setEditingCatId(cat.id)}
-                        className="flex flex-1 items-center gap-2 text-left py-1.5 px-2 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors min-w-0"
-                      >
-                        <span
-                          className="inline-block w-3.5 h-3.5 rounded shrink-0"
-                          style={{ background: cat.bgColor, border: `1px solid ${cat.color}` }}
-                        />
+                      <button type="button" onClick={() => setEditingCatId(cat.id)}
+                        className="flex flex-1 items-center gap-2 text-left py-1.5 px-2 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors min-w-0">
+                        <span className="inline-block w-3 h-3 rounded-sm shrink-0"
+                          style={{ background: cat.bgColor, borderLeft: `3px solid ${cat.color}` }} />
                         <span className="flex-1 text-sm font-semibold truncate" style={{ color: cat.color }}>{cat.label}</span>
                         <Pencil size={11} className="text-slate-600 shrink-0" />
                       </button>
-                      <button
-                        type="button"
+                      <button type="button"
                         onClick={() => { if (confirm(`Delete "${cat.label}"?`)) removeCategory(cat.id) }}
                         className="p-1.5 rounded transition-opacity disabled:opacity-25 disabled:cursor-not-allowed hover:bg-white/5"
                         disabled={isDefault || store.categories.length <= 1}
-                        title={isDefault ? 'Built-in categories cannot be deleted' : store.categories.length <= 1 ? 'Cannot delete the last category' : `Delete ${cat.label}`}
-                      >
+                        title={isDefault ? 'Built-in categories cannot be deleted' : 'Delete'}>
                         <Trash2 size={11} className="text-red-400" />
                       </button>
                     </>
@@ -333,56 +292,45 @@ export function SettingsPage() {
               )
             })}
           </div>
-
-          {/* Add new category */}
-          <div className="flex items-center gap-2 pt-2 flex-wrap" style={{ borderTop: '1px solid #1e2d40' }}>
-            <input
-              value={newCatLabel}
-              onChange={(e) => setNewCatLabel(e.target.value)}
+          {/* Add category — stacked on mobile */}
+          <div className="pt-3 space-y-2" style={{ borderTop: '1px solid #1e2d40' }}>
+            <input value={newCatLabel} onChange={(e) => setNewCatLabel(e.target.value)}
               placeholder="New category name…"
-              className="flex-1 min-w-28 px-2 py-1.5 rounded text-xs focus:outline-none"
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
               style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && newCatLabel.trim()) {
                   addCategory({ label: newCatLabel.trim(), color: newCatColor, bgColor: newCatBg })
                   setNewCatLabel('')
                 }
-              }}
-            />
-            <div className="flex items-center gap-1">
-              <label className="text-xs text-slate-500">Text</label>
-              <input type="color" value={newCatColor} onChange={(e) => setNewCatColor(e.target.value)}
-                className="w-7 h-6 rounded cursor-pointer border-0 bg-transparent" />
+              }} />
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-500">Text colour</label>
+                <input type="color" value={newCatColor} onChange={(e) => setNewCatColor(e.target.value)}
+                  className="w-8 h-7 rounded cursor-pointer border-0 bg-transparent" />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-500">Fill colour</label>
+                <input type="color" value={newCatBg} onChange={(e) => setNewCatBg(e.target.value)}
+                  className="w-8 h-7 rounded cursor-pointer border-0 bg-transparent" />
+              </div>
+              <button type="button"
+                onClick={() => { if (!newCatLabel.trim()) return; addCategory({ label: newCatLabel.trim(), color: newCatColor, bgColor: newCatBg }); setNewCatLabel('') }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold ml-auto"
+                style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37', minHeight: '40px' }}>
+                <Plus size={13} /> Add Category
+              </button>
             </div>
-            <div className="flex items-center gap-1">
-              <label className="text-xs text-slate-500">Fill</label>
-              <input type="color" value={newCatBg} onChange={(e) => setNewCatBg(e.target.value)}
-                className="w-7 h-6 rounded cursor-pointer border-0 bg-transparent" />
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (!newCatLabel.trim()) return
-                addCategory({ label: newCatLabel.trim(), color: newCatColor, bgColor: newCatBg })
-                setNewCatLabel('')
-              }}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold"
-              style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
-            >
-              <Plus size={12} /> Add
-            </button>
           </div>
         </section>
 
-        {/* ── Notifications ─────────────────────────────────────────────── */}
-        <section
-          className="rounded-xl p-4 space-y-3"
-          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
-        >
+        {/* ── 4. Notifications ─────────────────────────────────────────── */}
+        <section className="rounded-xl p-4 space-y-3" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
           <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Notifications</h3>
           <div className="flex items-center gap-3 flex-wrap">
             {notifPerm === 'granted' ? (
-              <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#34d399' }}>
+              <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#4ade80' }}>
                 <Bell size={13} /> Notifications enabled
               </span>
             ) : notifPerm === 'denied' ? (
@@ -390,222 +338,158 @@ export function SettingsPage() {
                 <BellOff size={13} /> Blocked — enable in your browser/OS settings
               </span>
             ) : (
-              <button
-                type="button"
-                onClick={handleEnableNotifications}
+              <button type="button" onClick={handleEnableNotifications}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
-                style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
-              >
+                style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37', minHeight: '44px' }}>
                 <Bell size={14} /> Enable Notifications
-                </button>
-              )}
-              {notifPerm === 'granted' && (
-                <button
-                  type="button"
-                  onClick={handleTestNotification}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
-                  style={{ background: '#1e2d40', color: testSent ? '#34d399' : '#94a3b8', border: '1px solid #243447' }}
-                >
-                  <BellRing size={12} /> {testSent ? 'Sent!' : 'Send test'}
-                </button>
-              )}
-            </div>
-            <p className="text-xs text-slate-600">
-              Reminders fire while STRATUM is open in your browser. Set a start time on an event, then choose a reminder — the notification fires that many minutes before.
-            </p>
-
-            {/* Background push */}
-            <div className="pt-3 mt-3" style={{ borderTop: '1px solid #1e2d40' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>
-                Background Push (when app is closed)
-              </p>
-              {!canUseBackgroundPush ? (
-                <p className="text-xs" style={{ color: '#64748b' }}>
-                  Background push requires Supabase-backed accounts and a configured cron job.
-                </p>
-              ) : pushStatus === 'unsupported' ? (
-                <p className="text-xs" style={{ color: '#64748b' }}>Not supported in this browser</p>
-              ) : pushStatus === 'denied' ? (
-                <p className="text-xs" style={{ color: '#f87171' }}>Blocked — enable notifications in browser settings first</p>
-              ) : pushStatus === 'subscribed' ? (
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#34d399' }}>
-                    <Bell size={13} /> Push enabled ✓
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleDisablePush}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-80 transition-opacity"
-                    style={{ background: '#1e2d40', color: '#f87171', border: '1px solid #3b1e1e' }}
-                  >
-                    Disable
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleEnablePush}
-                    disabled={pushStatus === 'loading'}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
-                    style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37', opacity: pushStatus === 'loading' ? 0.5 : 1, minHeight: '44px', cursor: pushStatus === 'loading' ? 'wait' : 'pointer' }}
-                  >
-                    <BellRing size={14} /> {pushStatus === 'loading' ? 'Checking…' : 'Enable Background Push'}
-                  </button>
-                  {pushError === 'IOS_NOT_INSTALLED' && (
-                    <p className="mt-2 text-xs" style={{ color: '#f59e0b' }}>
-                      📱 On iPhone/iPad, you must <strong>add STRATUM to your Home Screen</strong> first, then open it from there and try again.
-                    </p>
-                  )}
-                  {pushError && pushError !== 'IOS_NOT_INSTALLED' && (
-                    <p className="mt-2 text-xs" style={{ color: '#f87171' }}>
-                      {pushError === 'PERMISSION_DENIED'
-                        ? 'Permission denied — check browser notification settings.'
-                        : pushError === 'SUPABASE_REQUIRED'
-                        ? 'Background push requires Supabase-backed sync and a signed-in account.'
-                        : pushError === 'SW_TIMEOUT'
-                        ? 'Service worker timed out — try refreshing the page.'
-                        : `Failed: ${pushError}`}
-                    </p>
-                  )}
-                </>
-              )}
-              <p className="text-xs mt-2" style={{ color: '#475569' }}>
-                Requires Supabase + cron job (/api/send-reminders every minute via cron-job.org).
-              </p>
-            </div>
-        </section>
-
-        <section
-          className="rounded-xl p-4 space-y-3"
-          style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
-        >
-          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
-            Import, Export & Share
-          </h3>
-          <p className="text-xs text-slate-500">
-            Bring plans in from calendar files or spreadsheets, especially if they started life in Word or PDF. Export as CSV, print to PDF, or share a read-only link from one place.
+              </button>
+            )}
+            {notifPerm === 'granted' && (
+              <button type="button" onClick={handleTestNotification}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
+                style={{ background: '#1e2d40', color: testSent ? '#4ade80' : '#94a3b8', border: '1px solid #243447' }}>
+                <BellRing size={12} /> {testSent ? 'Sent!' : 'Send test'}
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-slate-600">
+            Reminders fire while STRATUM is open. Set a start time on an event, choose a reminder offset — the notification fires that many minutes before.
           </p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <div
-              className="rounded-xl p-4 space-y-3"
-              style={{ background: '#111827', border: '1px solid #1e2d40' }}
-            >
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
-                  Import
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Use one-time imports with preview before anything is saved.
-                </p>
+          {/* Background push */}
+          <div className="pt-3" style={{ borderTop: '1px solid #1e2d40' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#94a3b8' }}>
+              Background Push <span className="text-slate-600 font-normal normal-case">(when app is closed)</span>
+            </p>
+            {!canUseBackgroundPush ? (
+              <p className="text-xs text-slate-600">Requires a signed-in account and Supabase configuration.</p>
+            ) : pushStatus === 'unsupported' ? (
+              <p className="text-xs text-slate-600">Not supported in this browser.</p>
+            ) : pushStatus === 'denied' ? (
+              <p className="text-xs" style={{ color: '#f87171' }}>Blocked — enable notifications in browser settings first.</p>
+            ) : pushStatus === 'subscribed' ? (
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#4ade80' }}>
+                  <Bell size={13} /> Push enabled ✓
+                </span>
+                <button type="button" onClick={handleDisablePush}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-80 transition-opacity"
+                  style={{ background: '#1e2d40', color: '#f87171', border: '1px solid #3b1e1e' }}>
+                  Disable
+                </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowIcsImport(true)}
+            ) : (
+              <>
+                <button type="button" onClick={handleEnablePush} disabled={pushStatus === 'loading'}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
-                  style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
-                >
-                  <Upload size={14} /> Import .ics Calendar
+                  style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37', opacity: pushStatus === 'loading' ? 0.5 : 1, minHeight: '44px', cursor: pushStatus === 'loading' ? 'wait' : 'pointer' }}>
+                  <BellRing size={14} /> {pushStatus === 'loading' ? 'Checking…' : 'Enable Background Push'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowTableImport(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
-                  style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37' }}
-                >
-                  <FileSpreadsheet size={14} /> Import CSV / Excel
-                </button>
-                <button
-                  type="button"
-                  onClick={downloadPlannerImportTemplate}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-                  style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
-                >
-                  <FileUp size={14} /> Download Template
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrelateRecategorizedCount(recategorizePrelateEvents())}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-                  style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
-                >
-                  <RotateCcw size={14} /> Recolour PRELATE 2026
-                </button>
-              </div>
-              {prelateRecategorizedCount !== null && (
-                <p className="text-xs" style={{ color: prelateRecategorizedCount > 0 ? '#34d399' : '#94a3b8' }}>
-                  {prelateRecategorizedCount > 0
-                    ? `Updated ${prelateRecategorizedCount} PRELATE event${prelateRecategorizedCount === 1 ? '' : 's'}.`
-                    : 'No PRELATE events needed updating.'}
-                </p>
-              )}
-            </div>
-
-            <div
-              className="rounded-xl p-4 space-y-3"
-              style={{ background: '#111827', border: '1px solid #1e2d40' }}
-            >
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#94a3b8' }}>
-                  Export & share
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Export a working file, create a PDF-ready printout, or send a secure read-only link.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => exportToCSV(store)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-                  style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
-                >
-                  <FileDown size={14} /> Export CSV
-                </button>
-                <button
-                  type="button"
-                  onClick={requestPlannerPrintExport}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-                  style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
-                >
-                  <Printer size={14} /> Print / PDF
-                </button>
-                {isSupabaseConfigured ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowShareModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
-                    style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
-                  >
-                    <Share2 size={14} /> Manage Share Links
-                  </button>
-                ) : (
-                  <p className="text-xs text-slate-500">
-                    Share links require Supabase. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable them.
+                {pushError === 'IOS_NOT_INSTALLED' && (
+                  <p className="mt-2 text-xs" style={{ color: '#f59e0b' }}>
+                    📱 Add STRATUM to your Home Screen first, then open it from there and try again.
                   </p>
                 )}
-              </div>
-            </div>
+                {pushError && pushError !== 'IOS_NOT_INSTALLED' && (
+                  <p className="mt-2 text-xs" style={{ color: '#f87171' }}>
+                    {pushError === 'PERMISSION_DENIED' ? 'Permission denied — check browser settings.'
+                      : pushError === 'SUPABASE_REQUIRED' ? 'Requires Supabase sync and a signed-in account.'
+                      : pushError === 'SW_TIMEOUT' ? 'Service worker timed out — try refreshing.'
+                      : `Failed: ${pushError}`}
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </section>
 
+        {/* ── 5. Import ────────────────────────────────────────────────── */}
+        <section className="rounded-xl p-4 space-y-3" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Import</h3>
+          <p className="text-xs text-slate-500">Bring plans in from calendar files or spreadsheets. All imports include a preview before anything is saved.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setShowIcsImport(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+              style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37', minHeight: '44px' }}>
+              <Upload size={14} /> Import .ics Calendar
+            </button>
+            <button type="button" onClick={() => setShowTableImport(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90"
+              style={{ background: '#1e2d40', color: '#d4af37', border: '1px solid #d4af37', minHeight: '44px' }}>
+              <FileSpreadsheet size={14} /> Import CSV / Excel
+            </button>
+            <button type="button" onClick={downloadPlannerImportTemplate}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+              style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447', minHeight: '44px' }}>
+              <FileUp size={14} /> Download Template
+            </button>
+          </div>
+        </section>
+
+        {/* ── 6. Export ────────────────────────────────────────────────── */}
+        <section className="rounded-xl p-4 space-y-3" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Export</h3>
+          <p className="text-xs text-slate-500">Export a working data file, generate a PDF-ready printout, or open the full Export Studio.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => exportToCSV(store)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+              style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447', minHeight: '44px' }}>
+              <FileDown size={14} /> Export CSV
+            </button>
+            <button type="button" onClick={requestPlannerPrintExport}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+              style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447', minHeight: '44px' }}>
+              <Printer size={14} /> Print / PDF
+            </button>
+          </div>
+        </section>
+
+        {/* ── 7. Share ─────────────────────────────────────────────────── */}
+        <section className="rounded-xl p-4 space-y-3" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Share</h3>
+          <p className="text-xs text-slate-500">Create read-only share links for your planner. Viewers cannot edit — they see a snapshot of your data.</p>
+          {isSupabaseConfigured ? (
+            <button type="button" onClick={() => setShowShareModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+              style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447', minHeight: '44px' }}>
+              <Share2 size={14} /> Manage Share Links
+            </button>
+          ) : (
+            <p className="text-xs text-slate-600">
+              Share links require Supabase. Add <code className="text-slate-400">VITE_SUPABASE_URL</code> and <code className="text-slate-400">VITE_SUPABASE_ANON_KEY</code> to enable.
+            </p>
+          )}
+        </section>
+
+        {/* ── 8. Advanced ──────────────────────────────────────────────── */}
+        <section className="rounded-xl p-4 space-y-3" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: '#94a3b8' }}>Advanced</h3>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setShowOnboarding(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors hover:bg-white/5"
+              style={{ border: '1px solid #243447', color: '#64748b', minHeight: '44px' }}>
+              <RotateCcw size={13} /> Setup Wizard
+            </button>
+            <button type="button"
+              onClick={() => setPrelateRecategorizedCount(recategorizePrelateEvents())}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-90"
+              style={{ background: '#111827', color: '#64748b', border: '1px solid #243447', minHeight: '44px' }}>
+              <RotateCcw size={14} /> Apply Imported Planner Colours
+            </button>
+          </div>
+          {prelateRecategorizedCount !== null && (
+            <p className="text-xs" style={{ color: prelateRecategorizedCount > 0 ? '#4ade80' : '#94a3b8' }}>
+              {prelateRecategorizedCount > 0
+                ? `Updated ${prelateRecategorizedCount} event${prelateRecategorizedCount === 1 ? '' : 's'}.`
+                : 'No events needed updating.'}
+            </p>
+          )}
+        </section>
+
         {/* ── Save ─────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between pt-2">
-          <button
-            type="button"
-            onClick={() => setShowOnboarding(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors hover:bg-white/5"
-            style={{ border: '1px solid #243447', color: '#64748b' }}
-          >
-            <RotateCcw size={12} />
-            Setup Wizard
-          </button>
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-colors"
-            style={{ background: saved ? '#16a34a' : '#d4af37', color: '#111827', minHeight: '44px' }}
-          >
+        <div className="flex items-center justify-end pt-2 pb-4">
+          <button type="submit"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-colors"
+            style={{ background: saved ? '#16a34a' : '#d4af37', color: '#111827', minHeight: '44px' }}>
             <Save size={14} />
             {saved ? 'Saved!' : 'Save Settings'}
           </button>
@@ -613,27 +497,11 @@ export function SettingsPage() {
       </form>
 
       {showOnboarding && (
-        <OnboardingModal
-          onComplete={() => {
-            if (user?.id) {
-              markOnboardingCompleted(user.id)
-            }
-            setShowOnboarding(false)
-          }}
-        />
+        <OnboardingModal onComplete={() => { if (user?.id) markOnboardingCompleted(user.id); setShowOnboarding(false) }} />
       )}
-
-      {showShareModal && (
-        <ShareModal onClose={() => setShowShareModal(false)} />
-      )}
-
-      {showIcsImport && (
-        <IcsImportModal onClose={() => setShowIcsImport(false)} />
-      )}
-
-      {showTableImport && (
-        <TableImportModal onClose={() => setShowTableImport(false)} />
-      )}
+      {showShareModal && <ShareModal onClose={() => setShowShareModal(false)} />}
+      {showIcsImport && <IcsImportModal onClose={() => setShowIcsImport(false)} />}
+      {showTableImport && <TableImportModal onClose={() => setShowTableImport(false)} />}
     </div>
   )
 }
