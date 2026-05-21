@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, CheckSquare, Square, Flag, X, Lock } from 'lucide-react'
+import { Plus, Target, ChevronDown, ChevronUp, Trash2, Pencil, CheckCircle2, Circle, CheckSquare, Square, Flag, Lock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { usePlanner } from '../context/PlannerContext'
 import { useAuth } from '../context/AuthContext'
 import type { Goal, Milestone, PriorityLevel, GoalStatus } from '../types'
 import { PRIORITY_COLORS, PRIORITY_LABELS, GOAL_STATUS_LABELS } from '../types'
+import { ModalSheet } from '../components/ModalSheet'
 
 // ─── Progress bar ─────────────────────────────────────────────────────────────
 
@@ -78,162 +79,136 @@ function GoalModal({
     progress: initial?.progress ?? 0,
   })
 
-  // Close on Escape
-  const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+  const footer = (
+    <div className="flex gap-2 justify-end px-6 py-4">
+      <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:bg-white/5 rounded-lg">Cancel</button>
+      <button
+        onClick={() => { if (form.title.trim()) { onSave(form); onClose() }}}
+        className="px-5 py-2 rounded-lg text-sm font-bold"
+        style={{ background: '#d4af37', color: '#111827' }}
+      >
+        Save Goal
+      </button>
+    </div>
+  )
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={initial?.title ? 'Edit Goal' : 'New Goal'}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-      style={{ background: 'rgba(0,0,0,0.75)' }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-      onKeyDown={handleKeyDown}
+    <ModalSheet
+      title={initial?.title ? 'Edit Goal' : 'New Goal'}
+      onClose={onClose}
+      footer={footer}
+      maxWidth="sm:max-w-md"
     >
-      <div
-        className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
-        style={{ background: '#111827', border: '1px solid #1e2d40', maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)' }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid #1e2d40' }}>
-          <h2 className="text-lg font-bold" style={{ color: '#d4af37' }}>
-            {initial?.title ? 'Edit Goal' : 'New Goal'}
-          </h2>
-          <button onClick={onClose} aria-label="Close" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
-            <X size={18} className="text-slate-400" />
-          </button>
-        </div>
-        {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 p-6 space-y-4">
+      <input
+        autoFocus
+        value={form.title}
+        onChange={(e) => setForm({ ...form, title: e.target.value })}
+        placeholder="e.g. Launch youth outreach programme"
+        className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+        style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+      />
 
-        <input
-          autoFocus
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          placeholder="e.g. Launch youth outreach programme"
-          className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-          style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-        />
+      <textarea
+        value={form.description}
+        onChange={(e) => setForm({ ...form, description: e.target.value })}
+        placeholder="What outcome are you pursuing?"
+        rows={2}
+        className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+        style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+      />
 
-        <textarea
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="What outcome are you pursuing?"
-          rows={2}
-          className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
-          style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-        />
-
-        {/* Strategic fields */}
-        <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #1e2d40', paddingTop: '1rem' }}>
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>Strategic Context</p>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Why This Matters</label>
-            <textarea
-              value={form.whyItMatters}
-              onChange={(e) => setForm({ ...form, whyItMatters: e.target.value })}
-              placeholder="Why is this important this year?"
-              rows={2}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Success Measure</label>
-            <input
-              value={form.successMeasure}
-              onChange={(e) => setForm({ ...form, successMeasure: e.target.value })}
-              placeholder="How will you know this is complete?"
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Quarter</label>
-            <select
-              value={form.quarter}
-              onChange={(e) => setForm({ ...form, quarter: Number(e.target.value) as 1|2|3|4 })}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            >
-              {[1,2,3,4].map((q) => <option key={q} value={q}>Q{q}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Year</label>
-            <input
-              type="number"
-              value={form.year}
-              onChange={(e) => setForm({ ...form, year: Number(e.target.value) })}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Status</label>
-            <select
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value as GoalStatus })}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            >
-              {Object.entries(GOAL_STATUS_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Priority</label>
-            <select
-              value={form.priority}
-              onChange={(e) => setForm({ ...form, priority: e.target.value as PriorityLevel })}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            >
-              {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
+      {/* Strategic fields */}
+      <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #1e2d40', paddingTop: '1rem' }}>
+        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>Strategic Context</p>
         <div>
-          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">
-            Progress: {form.progress}%
-          </label>
-          <input
-            type="range"
-            min={0} max={100}
-            value={form.progress}
-            onChange={(e) => setForm({ ...form, progress: Number(e.target.value) })}
-            className="w-full accent-yellow-400"
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Why This Matters</label>
+          <textarea
+            value={form.whyItMatters}
+            onChange={(e) => setForm({ ...form, whyItMatters: e.target.value })}
+            placeholder="Why is this important this year?"
+            rows={2}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
           />
         </div>
-
-        </div>
-        {/* Sticky footer */}
-        <div
-          className="shrink-0 flex gap-2 justify-end px-6 py-4"
-          style={{ borderTop: '1px solid #1e2d40', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-        >
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:bg-white/5 rounded-lg">Cancel</button>
-          <button
-            onClick={() => { if (form.title.trim()) { onSave(form); onClose() }}}
-            className="px-5 py-2 rounded-lg text-sm font-bold"
-            style={{ background: '#d4af37', color: '#111827' }}
-          >
-            Save Goal
-          </button>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Success Measure</label>
+          <input
+            value={form.successMeasure}
+            onChange={(e) => setForm({ ...form, successMeasure: e.target.value })}
+            placeholder="How will you know this is complete?"
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+          />
         </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Quarter</label>
+          <select
+            value={form.quarter}
+            onChange={(e) => setForm({ ...form, quarter: Number(e.target.value) as 1|2|3|4 })}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+          >
+            {[1,2,3,4].map((q) => <option key={q} value={q}>Q{q}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Year</label>
+          <input
+            type="number"
+            value={form.year}
+            onChange={(e) => setForm({ ...form, year: Number(e.target.value) })}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Status</label>
+          <select
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value as GoalStatus })}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+          >
+            {Object.entries(GOAL_STATUS_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Priority</label>
+          <select
+            value={form.priority}
+            onChange={(e) => setForm({ ...form, priority: e.target.value as PriorityLevel })}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+          >
+            {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">
+          Progress: {form.progress}%
+        </label>
+        <input
+          type="range"
+          min={0} max={100}
+          value={form.progress}
+          onChange={(e) => setForm({ ...form, progress: Number(e.target.value) })}
+          className="w-full accent-yellow-400"
+        />
+      </div>
+    </ModalSheet>
   )
 }
 

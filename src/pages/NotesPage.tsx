@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Plus, Trash2, Pin, Search, Tag, FileText, ChevronDown, X } from 'lucide-react'
+import { Plus, Trash2, Pin, Search, Tag, FileText, ChevronDown } from 'lucide-react'
 import { format } from 'date-fns'
 import { usePlanner } from '../context/PlannerContext'
 import type { Note, NotePeriod, PriorityLevel } from '../types'
 import { PRIORITY_COLORS, PRIORITY_LABELS } from '../types'
+import { ModalSheet } from '../components/ModalSheet'
 
 // ─── Note modal ───────────────────────────────────────────────────────────────
 
@@ -24,137 +25,119 @@ function NoteModal({
   const [tagsInput, setTagsInput] = useState((initial?.tags ?? []).join(', '))
   const [pinned, setPinned] = useState(initial?.pinned ?? false)
 
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={initial?.id ? 'Edit Note' : 'New Note'}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-      style={{ background: 'rgba(0,0,0,0.75)' }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
+  const pinButton = (
+    <button
+      onClick={() => setPinned(!pinned)}
+      aria-label={pinned ? 'Unpin note' : 'Pin note'}
+      className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1.5 ${
+        pinned ? 'bg-yellow-500/20 text-yellow-400' : 'text-slate-500 hover:bg-white/5'
+      }`}
     >
-      <div
-        className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
-        style={{ background: '#111827', border: '1px solid #1e2d40', maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 16px)' }}
+      <Pin size={12} />
+      {pinned ? 'Pinned' : 'Pin'}
+    </button>
+  )
+
+  const footer = (
+    <div className="flex gap-2 justify-end px-4 py-3">
+      <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:bg-white/5 rounded-lg">
+        Cancel
+      </button>
+      <button
+        onClick={() => {
+          if (!title.trim()) return
+          const tags = tagsInput
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+          onSave({
+            title: title.trim(),
+            content: content.trim(),
+            periodType: period,
+            periodRef: '',
+            year: currentYear,
+            priority,
+            tags,
+            pinned,
+          })
+          onClose()
+        }}
+        className="px-5 py-2 rounded-lg text-sm font-bold"
+        style={{ background: '#d4af37', color: '#111827' }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid #1e2d40' }}>
-          <h2 className="font-bold text-base" style={{ color: '#d4af37' }}>
-            {initial?.id ? 'Edit Note' : 'New Note'}
-          </h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPinned(!pinned)}
-              aria-label={pinned ? 'Unpin note' : 'Pin note'}
-              className={`p-2 rounded-lg text-sm flex items-center gap-1.5 ${
-                pinned ? 'bg-yellow-500/20 text-yellow-400' : 'text-slate-500 hover:bg-white/5'
-              }`}
-            >
-              <Pin size={14} />
-              {pinned ? 'Pinned' : 'Pin'}
-            </button>
-            <button onClick={onClose} aria-label="Close" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
-              <X size={18} className="text-slate-400" />
-            </button>
-          </div>
+        Save Note
+      </button>
+    </div>
+  )
+
+  return (
+    <ModalSheet
+      title={initial?.id ? 'Edit Note' : 'New Note'}
+      onClose={onClose}
+      footer={footer}
+      maxWidth="sm:max-w-lg"
+      headerActions={pinButton}
+    >
+      <input
+        autoFocus
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Note title..."
+        className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+        style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+      />
+
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Write your note here..."
+        rows={4}
+        className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+        style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0', lineHeight: '1.6' }}
+      />
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Period</label>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as NotePeriod)}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+          >
+            <option value="day">Day</option>
+            <option value="week">Week</option>
+            <option value="month">Month</option>
+            <option value="quarter">Quarter</option>
+            <option value="year">Year</option>
+          </select>
         </div>
-        {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 px-4 py-3 space-y-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Priority</label>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as PriorityLevel)}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+          >
+            {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Tags (comma separated)</label>
         <input
-          autoFocus
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Note title..."
+          value={tagsInput}
+          onChange={(e) => setTagsInput(e.target.value)}
+          placeholder="e.g. ministry, budget, vision"
           className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
           style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
         />
-
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your note here..."
-          rows={4}
-          className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
-          style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0', lineHeight: '1.6' }}
-        />
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Period</label>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as NotePeriod)}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            >
-              <option value="day">Day</option>
-              <option value="week">Week</option>
-              <option value="month">Month</option>
-              <option value="quarter">Quarter</option>
-              <option value="year">Year</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Priority</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as PriorityLevel)}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            >
-              {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Tags (comma separated)</label>
-          <input
-            value={tagsInput}
-            onChange={(e) => setTagsInput(e.target.value)}
-            placeholder="e.g. ministry, budget, vision"
-            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-          />
-        </div>
-
-        </div>
-        {/* Sticky footer */}
-        <div
-          className="shrink-0 flex gap-2 justify-end px-4 py-3"
-          style={{ borderTop: '1px solid #1e2d40', paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
-        >
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:bg-white/5 rounded-lg">Cancel</button>
-          <button
-            onClick={() => {
-              if (!title.trim()) return
-              const tags = tagsInput
-                .split(',')
-                .map((t) => t.trim())
-                .filter(Boolean)
-              onSave({
-                title: title.trim(),
-                content: content.trim(),
-                periodType: period,
-                periodRef: '',
-                year: currentYear,
-                priority,
-                tags,
-                pinned,
-              })
-              onClose()
-            }}
-            className="px-5 py-2 rounded-lg text-sm font-bold"
-            style={{ background: '#d4af37', color: '#111827' }}
-          >
-            Save Note
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalSheet>
   )
 }
 
@@ -221,12 +204,14 @@ function NoteCard({ note }: { note: Note }) {
 
           <div className="flex flex-col gap-0.5 shrink-0">
             <button
+              aria-label={`Edit note: ${note.title}`}
               className="p-1.5 rounded hover:bg-white/10 text-slate-400"
               onClick={() => setEditing(true)}
             >
               <FileText size={13} />
             </button>
             <button
+              aria-label={`Delete note: ${note.title}`}
               className="p-1.5 rounded hover:bg-red-900/30 text-red-400"
               onClick={() => { if (confirm('Delete note?')) removeNote(note.id) }}
             >

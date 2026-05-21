@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Plus, CheckSquare, Square, Trash2, Flag, Calendar, Clock, X, Pencil, Lock, AlertCircle } from 'lucide-react'
+import { Plus, CheckSquare, Square, Trash2, Flag, Calendar, Clock, Pencil, Lock, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { usePlanner } from '../context/PlannerContext'
 import { useAuth } from '../context/AuthContext'
 import type { Task, PriorityLevel, TaskPeriod } from '../types'
 import { PRIORITY_COLORS, PRIORITY_LABELS } from '../types'
+import { ModalSheet } from '../components/ModalSheet'
 
 // ─── Task modal ───────────────────────────────────────────────────────────────
 
@@ -27,139 +28,119 @@ function TaskModal({
   const [period, setPeriod] = useState<TaskPeriod>(initial?.period ?? 'day')
   const [goalId, setGoalId] = useState(initial?.goalId ?? '')
 
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={initial?.id ? 'Edit Task' : 'New Task'}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-      style={{ background: 'rgba(0,0,0,0.75)' }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-      onKeyDown={(e) => e.key === 'Escape' && onClose()}
-    >
-      <div
-        className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
-        style={{ background: '#111827', border: '1px solid #1e2d40', maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - 16px)' }}
+  const footer = (
+    <div className="flex gap-2 justify-end px-4 py-3">
+      <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:bg-white/5 rounded-lg">
+        Cancel
+      </button>
+      <button
+        onClick={() => {
+          if (!title.trim()) return
+          onSave({
+            title: title.trim(),
+            description: description.trim() || undefined,
+            date: period === 'day' ? date : undefined,
+            period,
+            year: date ? new Date(date).getFullYear() : currentYear,
+            priority,
+            completed: initial?.completed ?? false,
+            tags: [],
+            goalId: goalId || undefined,
+          })
+          onClose()
+        }}
+        className="px-5 py-2 rounded-lg text-sm font-bold"
+        style={{ background: '#d4af37', color: '#111827' }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid #1e2d40' }}>
-          <h2 className="font-bold text-base" style={{ color: '#d4af37' }}>
-            {initial?.id ? 'Edit Task' : 'New Task'}
-          </h2>
-          <button onClick={onClose} aria-label="Close" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
-            <X size={18} className="text-slate-400" />
-          </button>
-        </div>
-        {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 px-4 py-3 space-y-3">
-        <input
-          autoFocus
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Task title..."
-          className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-          style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-        />
+        Save Task
+      </button>
+    </div>
+  )
 
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Description..."
-          rows={2}
-          className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
-          style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-        />
+  return (
+    <ModalSheet
+      title={initial?.id ? 'Edit Task' : 'New Task'}
+      onClose={onClose}
+      footer={footer}
+      maxWidth="sm:max-w-sm"
+    >
+      <input
+        autoFocus
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Task title..."
+        className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+        style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+      />
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Priority</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as PriorityLevel)}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            >
-              {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Period</label>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as TaskPeriod)}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            >
-              <option value="day">Day</option>
-              <option value="week">Week</option>
-              <option value="month">Month</option>
-            </select>
-          </div>
-        </div>
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Description..."
+        rows={2}
+        className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+        style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+      />
 
-        {period === 'day' && (
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0', colorScheme: 'dark' }}
-            />
-          </div>
-        )}
-
-        {store.goals.length > 0 && (
-          <div>
-            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Link to Goal (optional)</label>
-            <select
-              value={goalId}
-              onChange={(e) => setGoalId(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-            >
-              <option value="">No goal</option>
-              {store.goals.map((g) => (
-                <option key={g.id} value={g.id}>{g.title}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        </div>
-        {/* Sticky footer */}
-        <div
-          className="shrink-0 flex gap-2 justify-end px-4 py-3"
-          style={{ borderTop: '1px solid #1e2d40', paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
-        >
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:bg-white/5 rounded-lg">Cancel</button>
-          <button
-            onClick={() => {
-              if (!title.trim()) return
-              onSave({
-                title: title.trim(),
-                description: description.trim() || undefined,
-                date: period === 'day' ? date : undefined,
-                period,
-                year: date ? new Date(date).getFullYear() : currentYear,
-                priority,
-                completed: initial?.completed ?? false,
-                tags: [],
-                goalId: goalId || undefined,
-              })
-              onClose()
-            }}
-            className="px-5 py-2 rounded-lg text-sm font-bold"
-            style={{ background: '#d4af37', color: '#111827' }}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Priority</label>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as PriorityLevel)}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
           >
-            Save Task
-          </button>
+            {Object.entries(PRIORITY_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Period</label>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as TaskPeriod)}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+          >
+            <option value="day">Day</option>
+            <option value="week">Week</option>
+            <option value="month">Month</option>
+          </select>
         </div>
       </div>
-    </div>
+
+      {period === 'day' && (
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0', colorScheme: 'dark' }}
+          />
+        </div>
+      )}
+
+      {store.goals.length > 0 && (
+        <div>
+          <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Link to Goal (optional)</label>
+          <select
+            value={goalId}
+            onChange={(e) => setGoalId(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+          >
+            <option value="">No goal</option>
+            {store.goals.map((g) => (
+              <option key={g.id} value={g.id}>{g.title}</option>
+            ))}
+          </select>
+        </div>
+      )}
+    </ModalSheet>
   )
 }
 
@@ -182,7 +163,12 @@ function TaskItem({ task }: { task: Task }) {
         }`}
         style={{ background: '#0d1224', border: `1px solid ${isOverdue ? 'rgba(239,68,68,0.25)' : '#1e2d40'}` }}
       >
-        <button onClick={() => toggleTask(task.id)} className="mt-0.5 shrink-0 p-0.5" style={{ minWidth: 20, minHeight: 20 }}>
+        <button
+          onClick={() => toggleTask(task.id)}
+          aria-label={task.completed ? `Mark "${task.title}" incomplete` : `Complete "${task.title}"`}
+          className="mt-0.5 shrink-0 p-0.5"
+          style={{ minWidth: 20, minHeight: 20 }}
+        >
           {task.completed
             ? <CheckSquare size={15} className="text-green-400" />
             : <Square size={15} style={{ color: PRIORITY_COLORS[task.priority] }} />}
@@ -234,6 +220,7 @@ function TaskItem({ task }: { task: Task }) {
           {canEdit ? (
             <>
               <button
+                aria-label={`Edit task: ${task.title}`}
                 title="Edit task"
                 className="p-1.5 rounded hover:bg-white/10"
                 onClick={() => setEditing(true)}
@@ -241,6 +228,7 @@ function TaskItem({ task }: { task: Task }) {
                 <Pencil size={12} className="text-slate-400" />
               </button>
               <button
+                aria-label={`Delete task: ${task.title}`}
                 title="Delete task"
                 className="p-1.5 rounded hover:bg-red-900/30"
                 onClick={() => { if (confirm('Delete task?')) removeTask(task.id) }}
@@ -384,18 +372,23 @@ export function TasksPage() {
             <p className="text-sm font-black text-white mb-1">
               {filter !== 'all' || priorityFilter !== 'all' ? 'No matching tasks' : 'No tasks yet'}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 mb-1">
               {filter !== 'all' || priorityFilter !== 'all'
                 ? 'Try adjusting the filters above.'
                 : 'Add tasks to keep your day on track.'}
             </p>
             {filter === 'all' && priorityFilter === 'all' && (
-              <button
-                onClick={() => setShowModal(true)}
-                className="mt-4 px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
-                style={{ background: '#d4af37', color: '#0a0e1a' }}>
-                + Add First Task
-              </button>
+              <>
+                <p className="text-xs mb-4" style={{ color: '#d4af3799' }}>
+                  Start with 1–3 actions for today.
+                </p>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
+                  style={{ background: '#d4af37', color: '#0a0e1a' }}>
+                  + Add First Task
+                </button>
+              </>
             )}
           </div>
         )}
