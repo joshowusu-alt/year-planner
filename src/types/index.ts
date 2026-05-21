@@ -10,20 +10,44 @@ export interface EventCategoryDef {
   bgColor: string  // hex / rgba – used for fill background
 }
 
+const PREMIUM_CATEGORY_PALETTE = [
+  { color: '#c8956a', bgColor: 'rgba(200,149,106,0.13)' }, // bronze / amber
+  { color: '#c7797d', bgColor: 'rgba(199,121,125,0.12)' }, // muted rose / coral
+  { color: '#5aaa8c', bgColor: 'rgba(90,170,140,0.12)' },  // emerald / teal
+  { color: '#9b8ec4', bgColor: 'rgba(155,142,196,0.12)' }, // muted violet / plum
+  { color: '#7f9bb8', bgColor: 'rgba(127,155,184,0.13)' }, // slate blue
+]
+
+const PREMIUM_CATEGORY_OVERRIDES: Record<string, { color: string; bgColor: string }> = {
+  holiday: PREMIUM_CATEGORY_PALETTE[0],
+  meeting: PREMIUM_CATEGORY_PALETTE[4],
+  personal: PREMIUM_CATEGORY_PALETTE[2],
+  general: PREMIUM_CATEGORY_PALETTE[3],
+}
+
+function categoryPaletteIndex(value: string): number {
+  let hash = 0
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0
+  }
+  return hash % PREMIUM_CATEGORY_PALETTE.length
+}
+
 export function getCategoryStyle(
   categoryId: string,
   categories: EventCategoryDef[],
 ): { color: string; bgColor: string } {
   const cat = categories.find((c) => c.id === categoryId)
-  if (!cat) return { color: '#94a3b8', bgColor: 'rgba(100,116,139,0.1)' }
-  return { color: cat.color, bgColor: cat.bgColor }
+  const paletteKey = cat?.id ?? categoryId
+  return PREMIUM_CATEGORY_OVERRIDES[paletteKey]
+    ?? PREMIUM_CATEGORY_PALETTE[categoryPaletteIndex(paletteKey || cat?.label || 'general')]
 }
 
 export const DEFAULT_CATEGORIES: EventCategoryDef[] = [
-  { id: 'meeting',  label: 'Meetings',       color: '#60a5fa', bgColor: 'rgba(96,165,250,0.15)'  },
-  { id: 'personal', label: 'Personal',       color: '#34d399', bgColor: 'rgba(52,211,153,0.12)'  },
-  { id: 'holiday',  label: 'Public Holiday', color: '#f97316', bgColor: 'rgba(249,115,22,0.15)'  },
-  { id: 'general',  label: 'General',        color: '#a78bfa', bgColor: 'rgba(167,139,250,0.12)' },
+  { id: 'meeting',  label: 'Meetings',       color: '#7f9bb8', bgColor: 'rgba(127,155,184,0.13)' },
+  { id: 'personal', label: 'Personal',       color: '#5aaa8c', bgColor: 'rgba(90,170,140,0.12)'  },
+  { id: 'holiday',  label: 'Public Holiday', color: '#c8956a', bgColor: 'rgba(200,149,106,0.13)' },
+  { id: 'general',  label: 'General',        color: '#9b8ec4', bgColor: 'rgba(155,142,196,0.12)' },
 ]
 
 // ─── Recurrence ───────────────────────────────────────────────────────────────
@@ -133,6 +157,8 @@ export interface Goal {
   userId?: string
   title: string
   description?: string
+  whyItMatters?: string       // why this goal matters this year
+  successMeasure?: string     // how you'll know it's complete
   quarter?: 1 | 2 | 3 | 4   // which quarter
   month?: number              // optional month pinning
   year: number
@@ -237,6 +263,7 @@ export interface PlannerStore {
   plannerTitle: string
   accentColor: string
   logoUrl?: string
+  yearTheme?: string               // optional high-level year vision/theme
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
