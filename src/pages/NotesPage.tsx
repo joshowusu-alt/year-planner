@@ -26,9 +26,13 @@ function NoteModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={initial?.id ? 'Edit Note' : 'New Note'}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
       <div
         className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
@@ -42,6 +46,7 @@ function NoteModal({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPinned(!pinned)}
+              aria-label={pinned ? 'Unpin note' : 'Pin note'}
               className={`p-2 rounded-lg text-sm flex items-center gap-1.5 ${
                 pinned ? 'bg-yellow-500/20 text-yellow-400' : 'text-slate-500 hover:bg-white/5'
               }`}
@@ -49,7 +54,7 @@ function NoteModal({
               <Pin size={14} />
               {pinned ? 'Pinned' : 'Pin'}
             </button>
-            <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+            <button onClick={onClose} aria-label="Close" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
               <X size={18} className="text-slate-400" />
             </button>
           </div>
@@ -363,15 +368,24 @@ export function NotesPage() {
           <NoteCard key={note.id} note={note} />
         ))}
         {sorted.length === 0 && (
-          <div
-            className="col-span-full flex flex-col items-center justify-center py-16 text-center"
-            style={{ color: '#475569' }}
-          >
-            <FileText size={40} className="mb-3 opacity-30" />
-            <p className="font-semibold text-sm">No notes yet</p>
-            <p className="text-xs mt-1 opacity-60">
-              {search ? `No notes match "${search}"` : 'Capture your first thought to get started'}
+          <div className="col-span-full flex flex-col items-center justify-center py-16 text-center px-6">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(212,175,55,0.1)' }}>
+              <FileText size={28} style={{ color: '#d4af37' }} />
+            </div>
+            <p className="text-sm font-black text-white mb-1">
+              {search ? 'No notes match that search' : 'No notes yet'}
             </p>
+            <p className="text-xs text-slate-500 mb-4">
+              {search ? `Try a different search term.` : 'Capture insights, decisions, and reflections as you plan.'}
+            </p>
+            {!search && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
+                style={{ background: '#d4af37', color: '#0a0e1a' }}>
+                + Add First Note
+              </button>
+            )}
           </div>
         )}
       </div>

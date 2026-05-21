@@ -84,7 +84,7 @@ interface PlannerContextValue {
   addNote: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => void
   editNote: (id: string, patch: Partial<Note>) => void
   removeNote: (id: string) => void
-  updateSettings: (patch: Partial<Pick<PlannerStore, 'organizationName' | 'plannerTitle' | 'accentColor' | 'logoUrl'>>) => void
+  updateSettings: (patch: Partial<Pick<PlannerStore, 'organizationName' | 'plannerTitle' | 'accentColor' | 'logoUrl' | 'yearTheme'>>) => void
   addCategory: (cat: Omit<EventCategoryDef, 'id'>) => void
   updateCategory: (id: string, patch: Partial<EventCategoryDef>) => void
   removeCategory: (id: string) => void

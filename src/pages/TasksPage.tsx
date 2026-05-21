@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, CheckSquare, Square, Trash2, Flag, Calendar, Clock, X, Pencil, Lock } from 'lucide-react'
+import { Plus, CheckSquare, Square, Trash2, Flag, Calendar, Clock, X, Pencil, Lock, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { usePlanner } from '../context/PlannerContext'
 import { useAuth } from '../context/AuthContext'
@@ -29,9 +29,13 @@ function TaskModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={initial?.id ? 'Edit Task' : 'New Task'}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
       <div
         className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
@@ -42,7 +46,7 @@ function TaskModal({
           <h2 className="font-bold text-base" style={{ color: '#d4af37' }}>
             {initial?.id ? 'Edit Task' : 'New Task'}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
             <X size={18} className="text-slate-400" />
           </button>
         </div>
@@ -166,8 +170,9 @@ function TaskItem({ task }: { task: Task }) {
   const { user } = useAuth()
   const [editing, setEditing] = useState(false)
 
-  // A task is editable by the current user if it has no owner (legacy) or they own it
   const canEdit = !task.userId || task.userId === user?.id
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+  const isOverdue = !task.completed && task.date && task.date < todayStr
 
   return (
     <>
@@ -175,7 +180,7 @@ function TaskItem({ task }: { task: Task }) {
         className={`flex items-start gap-2.5 px-2.5 py-2 rounded-xl group transition-all ${
           task.completed ? 'opacity-50' : ''
         }`}
-        style={{ background: '#0d1224', border: '1px solid #1e2d40' }}
+        style={{ background: '#0d1224', border: `1px solid ${isOverdue ? 'rgba(239,68,68,0.25)' : '#1e2d40'}` }}
       >
         <button onClick={() => toggleTask(task.id)} className="mt-0.5 shrink-0 p-0.5" style={{ minWidth: 20, minHeight: 20 }}>
           {task.completed
@@ -184,9 +189,17 @@ function TaskItem({ task }: { task: Task }) {
         </button>
 
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-semibold leading-snug ${task.completed ? 'line-through text-slate-500' : 'text-white'}`}>
-            {task.title}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className={`text-sm font-semibold leading-snug ${task.completed ? 'line-through text-slate-500' : 'text-white'}`}>
+              {task.title}
+            </p>
+            {isOverdue && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-1.5 py-0.5 rounded"
+                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>
+                <AlertCircle size={9} /> Overdue
+              </span>
+            )}
+          </div>
           {task.description && (
             <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{task.description}</p>
           )}
@@ -199,7 +212,7 @@ function TaskItem({ task }: { task: Task }) {
               {PRIORITY_LABELS[task.priority]}
             </span>
             {task.date && (
-              <span className="text-xs text-slate-500">{task.date}</span>
+              <span className="text-xs" style={{ color: isOverdue ? '#ef4444' : '#64748b' }}>{task.date}</span>
             )}
             {task.period !== 'day' && (
               <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#1e2d40', color: '#64748b' }}>
@@ -364,14 +377,26 @@ export function TasksPage() {
           </section>
         )}
         {sorted.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <CheckSquare size={40} className="text-slate-700 mb-3" />
-            <p className="text-slate-500 font-semibold text-sm">No tasks</p>
-            <p className="text-xs text-slate-600 mt-1">
-              {filter !== 'all' || priorityFilter !== 'all'
-                ? 'No tasks match the current filters'
-                : 'Add your first task to stay on track'}
+          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(212,175,55,0.1)' }}>
+              <CheckSquare size={28} style={{ color: '#d4af37' }} />
+            </div>
+            <p className="text-sm font-black text-white mb-1">
+              {filter !== 'all' || priorityFilter !== 'all' ? 'No matching tasks' : 'No tasks yet'}
             </p>
+            <p className="text-xs text-slate-500">
+              {filter !== 'all' || priorityFilter !== 'all'
+                ? 'Try adjusting the filters above.'
+                : 'Add tasks to keep your day on track.'}
+            </p>
+            {filter === 'all' && priorityFilter === 'all' && (
+              <button
+                onClick={() => setShowModal(true)}
+                className="mt-4 px-4 py-2 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
+                style={{ background: '#d4af37', color: '#0a0e1a' }}>
+                + Add First Task
+              </button>
+            )}
           </div>
         )}
       </div>

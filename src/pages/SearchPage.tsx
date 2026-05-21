@@ -417,10 +417,24 @@ export function SearchPage() {
       >
         {/* Empty query placeholder */}
         {!q && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Search size={32} className="text-slate-700 mb-3" />
-            <p style={{ color: '#94a3b8', fontSize: '0.875rem' }}>Search events, goals, tasks, and notes...</p>
-            <p className="text-slate-600 text-xs mt-1">Type a keyword to get started</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+            <Search size={28} className="text-slate-700 mb-3" />
+            <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '6px' }}>
+              Search events, goals, tasks, and notes.
+            </p>
+            <p className="text-slate-600 text-xs mb-6">Find anything across your entire planner.</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {['Review', 'Q2', 'Public Holiday', 'task', 'milestone', 'budget', 'vision', 'meeting'].map((term) => (
+                <button
+                  key={term}
+                  onClick={() => setQuery(term)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors hover:bg-white/10"
+                  style={{ background: '#0d1224', border: '1px solid #1e2d40', color: '#94a3b8', minHeight: '30px' }}
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

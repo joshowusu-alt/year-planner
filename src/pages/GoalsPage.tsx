@@ -78,11 +78,18 @@ function GoalModal({
     progress: initial?.progress ?? 0,
   })
 
+  // Close on Escape
+  const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={initial?.title ? 'Edit Goal' : 'New Goal'}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={handleKeyDown}
     >
       <div
         className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
@@ -93,7 +100,7 @@ function GoalModal({
           <h2 className="text-lg font-bold" style={{ color: '#d4af37' }}>
             {initial?.title ? 'Edit Goal' : 'New Goal'}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
             <X size={18} className="text-slate-400" />
           </button>
         </div>

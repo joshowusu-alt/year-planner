@@ -8,16 +8,31 @@ interface Props {
   onExportRequest?: () => void
 }
 
-const mainItems: { path: string; label: string; icon: React.ElementType }[] = [
-  { path: '/planner',   label: 'Annual View',  icon: CalendarDays },
-  { path: '/monthly',   label: 'Monthly View', icon: CalendarRange },
-  { path: '/weekly',    label: 'Weekly View',  icon: Calendar },
-  { path: '/goals',     label: 'Goals',        icon: Target },
-  { path: '/tasks',     label: 'Tasks',        icon: CheckSquare },
-  { path: '/strategy',  label: 'Strategy',     icon: Layers },
-  { path: '/dashboard', label: 'Dashboard',    icon: BarChart2 },
-  { path: '/notes',     label: 'Notes',        icon: FileText },
-  { path: '/search',    label: 'Search',       icon: Search },
+const navGroups: { label: string; items: { path: string; label: string; icon: React.ElementType }[] }[] = [
+  {
+    label: 'Planning',
+    items: [
+      { path: '/planner',   label: 'Annual View',  icon: CalendarDays },
+      { path: '/monthly',   label: 'Monthly View', icon: CalendarRange },
+      { path: '/weekly',    label: 'Weekly View',  icon: Calendar },
+      { path: '/strategy',  label: 'Strategy',     icon: Layers },
+    ],
+  },
+  {
+    label: 'Execution',
+    items: [
+      { path: '/goals',  label: 'Goals',  icon: Target },
+      { path: '/tasks',  label: 'Tasks',  icon: CheckSquare },
+      { path: '/notes',  label: 'Notes',  icon: FileText },
+    ],
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      { path: '/dashboard', label: 'Dashboard', icon: BarChart2 },
+      { path: '/search',    label: 'Search',    icon: Search },
+    ],
+  },
 ]
 
 const bottomItems: { path: string; label: string; icon: React.ElementType }[] = [
@@ -65,26 +80,35 @@ export function Sidebar({ onExportRequest }: Props) {
         </p>
       </div>
 
-      {/* Main nav */}
-      <nav role="navigation" aria-label="Main navigation" className="flex-1 py-4 px-3 space-y-1">
-        {mainItems.map(({ path, label, icon: Icon }) => {
-          const active = pathname === path
-          return (
-            <button
-              key={path}
-              onClick={() => navigate(path)}
-              aria-current={active ? 'page' : undefined}
-              aria-label={label}
-              title={label}
-              className="focus-ring w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
-              style={active ? { background: '#1e2d40', color: '#d4af37' } : { color: '#94a3b8' }}
-            >
-              <Icon size={16} />
+      {/* Grouped nav */}
+      <nav role="navigation" aria-label="Main navigation" className="flex-1 py-3 px-3 overflow-y-auto space-y-4">
+        {navGroups.map(({ label, items }) => (
+          <div key={label}>
+            <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1" style={{ color: '#334155' }}>
               {label}
-              {active && <ChevronRight size={14} className="ml-auto" />}
-            </button>
-          )
-        })}
+            </p>
+            <div className="space-y-0.5">
+              {items.map(({ path, label: itemLabel, icon: Icon }) => {
+                const active = pathname === path
+                return (
+                  <button
+                    key={path}
+                    onClick={() => navigate(path)}
+                    aria-current={active ? 'page' : undefined}
+                    aria-label={itemLabel}
+                    title={itemLabel}
+                    className="focus-ring w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all"
+                    style={active ? { background: '#1e2d40', color: '#d4af37' } : { color: '#94a3b8' }}
+                  >
+                    <Icon size={15} />
+                    {itemLabel}
+                    {active && <ChevronRight size={13} className="ml-auto" />}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Bottom: settings + user */}
