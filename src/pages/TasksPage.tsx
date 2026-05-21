@@ -29,9 +29,13 @@ function TaskModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={initial?.id ? 'Edit Task' : 'New Task'}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
       <div
         className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
@@ -42,7 +46,7 @@ function TaskModal({
           <h2 className="font-bold text-base" style={{ color: '#d4af37' }}>
             {initial?.id ? 'Edit Task' : 'New Task'}
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+          <button onClick={onClose} aria-label="Close" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
             <X size={18} className="text-slate-400" />
           </button>
         </div>

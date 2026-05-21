@@ -40,20 +40,25 @@ export function StrategyPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 md:p-6">
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto">
           {/* Tagline */}
-          <p className="text-xs uppercase tracking-widest text-center" style={{ color: '#64748b' }}>
+          <p className="text-xs uppercase tracking-widest text-center mb-6" style={{ color: '#64748b' }}>
             Plan your year in layers: vision → strategy → execution
           </p>
 
-          {/* Vital Few */}
-          <VitalFewPanel />
+          {/* Desktop two-column / Mobile single-column */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Vital Few + Weekly Alignment */}
+            <div className="space-y-6">
+              <VitalFewPanel />
+              <WeeklyAlignmentCheck />
+            </div>
 
-          {/* Time Analysis */}
-          <TimeAnalysis />
-
-          {/* Weekly Alignment Check */}
-          <WeeklyAlignmentCheck />
+            {/* Right: Time Analysis */}
+            <div>
+              <TimeAnalysis />
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -26,9 +26,13 @@ function NoteModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={initial?.id ? 'Edit Note' : 'New Note'}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.75)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
       <div
         className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col"
@@ -42,6 +46,7 @@ function NoteModal({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPinned(!pinned)}
+              aria-label={pinned ? 'Unpin note' : 'Pin note'}
               className={`p-2 rounded-lg text-sm flex items-center gap-1.5 ${
                 pinned ? 'bg-yellow-500/20 text-yellow-400' : 'text-slate-500 hover:bg-white/5'
               }`}
@@ -49,7 +54,7 @@ function NoteModal({
               <Pin size={14} />
               {pinned ? 'Pinned' : 'Pin'}
             </button>
-            <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+            <button onClick={onClose} aria-label="Close" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
               <X size={18} className="text-slate-400" />
             </button>
           </div>

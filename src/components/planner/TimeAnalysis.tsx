@@ -19,15 +19,29 @@ interface CategoryCount {
 function getRecommendation(counts: CategoryCount[], total: number): string {
   if (total === 0) return 'No events scheduled this week — plan some focus blocks'
 
+  const active = counts.filter((c) => c.count > 0).sort((a, b) => b.count - a.count)
+  const categoryCount = active.length
+  const top = active[0]
+
   const meetingEntry = counts.find((c) => c.category.id === 'meeting')
   const personalEntry = counts.find((c) => c.category.id === 'personal')
 
   const meetingPct = meetingEntry ? meetingEntry.count / total : 0
   const personalPct = personalEntry ? personalEntry.count / total : 0
 
-  if (meetingPct > 0.5) return 'Consider protecting more focus blocks'
-  if (personalPct < 0.1) return 'Consider scheduling personal growth time'
-  return 'Good balance this week'
+  if (categoryCount === 1) {
+    return `${total} event${total !== 1 ? 's' : ''} this week — all under ${top?.category.label ?? 'one category'}. Consider adding other types.`
+  }
+  if (meetingPct > 0.6) {
+    return `${total} event${total !== 1 ? 's' : ''} this week — over half in ${meetingEntry?.category.label ?? 'meetings'}. Consider protecting focus blocks.`
+  }
+  if (personalPct < 0.1 && total > 3) {
+    return `${total} events across ${categoryCount} categories — no personal growth time scheduled yet.`
+  }
+  if (categoryCount >= 3) {
+    return `${total} event${total !== 1 ? 's' : ''} across ${categoryCount} categories — good spread this week.`
+  }
+  return `${total} event${total !== 1 ? 's' : ''} across ${categoryCount} categor${categoryCount !== 1 ? 'ies' : 'y'} — most activity in ${top?.category.label ?? 'one area'}.`
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────

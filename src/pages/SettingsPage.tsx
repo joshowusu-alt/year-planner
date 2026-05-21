@@ -30,6 +30,7 @@ export function SettingsPage() {
   const [accent, setAccent] = useState(store.accentColor)
   const [yearTheme, setYearTheme] = useState(store.yearTheme ?? '')
   const [saved, setSaved] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
@@ -124,6 +125,7 @@ export function SettingsPage() {
       setMonthTheme(Number(month), currentYear, theme)
     })
     setSaved(true)
+    setIsDirty(false)
     setTimeout(() => setSaved(false), 2000)
   }
 
@@ -155,7 +157,7 @@ export function SettingsPage() {
   ]
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl pb-safe">
+    <div className="p-4 md:p-6 max-w-4xl pb-safe relative">
       <h2
         className="text-lg font-black tracking-widest uppercase mb-5"
         style={{ color: '#d4af37' }}
@@ -163,7 +165,25 @@ export function SettingsPage() {
         Settings
       </h2>
 
-      <form onSubmit={handleSettingsSave} className="space-y-4">
+      {/* Floating dirty-state save bar */}
+      {isDirty && !saved && (
+        <div
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2 rounded-xl shadow-xl"
+          style={{ background: '#111827', border: '1px solid #d4af37', boxShadow: '0 0 24px rgba(212,175,55,0.2)' }}
+        >
+          <span className="text-xs text-slate-400">Unsaved changes</span>
+          <button
+            type="submit"
+            form="settings-form"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-colors"
+            style={{ background: '#d4af37', color: '#111827' }}
+          >
+            <Save size={12} /> Save Settings
+          </button>
+        </div>
+      )}
+
+      <form id="settings-form" onSubmit={handleSettingsSave} className="space-y-4">
 
         {/* ── 1. Identity ─────────────────────────────────────────────── */}
         <section className="rounded-xl p-4 space-y-3" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
@@ -171,13 +191,13 @@ export function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Organisation</label>
-              <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Your organisation…"
+              <input value={orgName} onChange={(e) => { setOrgName(e.target.value); setIsDirty(true) }} placeholder="Your organisation…"
                 className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                 style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Planner Title</label>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="STRATUM 2026…"
+              <input value={title} onChange={(e) => { setTitle(e.target.value); setIsDirty(true) }} placeholder="STRATUM 2026…"
                 className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                 style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }} />
             </div>
@@ -186,7 +206,7 @@ export function SettingsPage() {
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Accent Colour</label>
               <div className="flex items-center gap-2">
-                <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)}
+                <input type="color" value={accent} onChange={(e) => { setAccent(e.target.value); setIsDirty(true) }}
                   className="w-8 h-8 rounded cursor-pointer border-0 bg-transparent" />
                 <span className="text-xs font-mono text-slate-400">{accent}</span>
               </div>
@@ -217,7 +237,7 @@ export function SettingsPage() {
             <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Year Theme / Vision</label>
             <input
               value={yearTheme}
-              onChange={(e) => setYearTheme(e.target.value)}
+              onChange={(e) => { setYearTheme(e.target.value); setIsDirty(true) }}
               placeholder={`What frames ${currentYear} for you? e.g. "Year of Foundations" or "Build, grow, ship"`}
               className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
               style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
@@ -225,27 +245,39 @@ export function SettingsPage() {
             <p className="text-xs text-slate-600 mt-1">Shown on the Dashboard and in exports as a guiding statement for the year.</p>
           </div>
 
-          {/* Month Themes */}
+          {/* Month Themes — grouped by quarter */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Month Themes</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {MONTH_NAMES.map((name, i) => {
-                const month = i + 1
-                return (
-                  <div key={month} className="flex items-center gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wider w-20 shrink-0" style={{ color: '#d4af37' }}>
-                      {name}
-                    </span>
-                    <input
-                      value={themes[month] ?? ''}
-                      onChange={(e) => setThemes((prev) => ({ ...prev, [month]: e.target.value }))}
-                      placeholder="Theme or focus…"
-                      className="flex-1 px-2 py-1 rounded text-xs focus:outline-none"
-                      style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
-                    />
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Month Themes</p>
+            <div className="space-y-4">
+              {[
+                { label: 'Q1 — Foundation', months: [1, 2, 3] },
+                { label: 'Q2 — Execution',  months: [4, 5, 6] },
+                { label: 'Q3 — Expansion',  months: [7, 8, 9] },
+                { label: 'Q4 — Finish',     months: [10, 11, 12] },
+              ].map(({ label, months }) => (
+                <div key={label}>
+                  <p className="text-xs text-slate-600 uppercase tracking-wider mb-1.5">{label}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {months.map((month) => {
+                      const name = MONTH_NAMES[month - 1]
+                      return (
+                        <div key={month} className="flex items-center gap-2">
+                          <span className="text-xs font-semibold uppercase tracking-wider w-7 shrink-0" style={{ color: '#d4af37' }}>
+                            {name.slice(0, 3)}
+                          </span>
+                          <input
+                            value={themes[month] ?? ''}
+                            onChange={(e) => { setThemes((prev) => ({ ...prev, [month]: e.target.value })); setIsDirty(true) }}
+                            placeholder="Theme…"
+                            className="flex-1 px-2 py-1 rounded text-xs focus:outline-none"
+                            style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+                          />
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
+                </div>
+              ))}
             </div>
           </div>
         </section>
