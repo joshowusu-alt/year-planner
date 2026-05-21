@@ -23,16 +23,24 @@ function EventChip({
   const style = getCategoryStyle(event.category, categories)
   return (
     <span
-      className="inline-flex items-center gap-1 text-xs leading-tight cursor-pointer group rounded px-1"
-      style={{ color: style.color, background: style.bgColor }}
+      className="inline-flex items-center gap-1 text-xs leading-tight cursor-pointer group rounded-sm"
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        borderLeft: `2px solid ${style.color}`,
+        color: '#cbd5e1',
+        paddingLeft: '5px',
+        paddingRight: '4px',
+        paddingTop: '1px',
+        paddingBottom: '1px',
+      }}
       onClick={(ev) => { ev.stopPropagation(); onEdit(event) }}
       title={event.notes || event.title}
     >
-      <span>
-        {event.startTime && <span className="opacity-60 text-[10px]">{event.startTime} </span>}
+      <span className="truncate min-w-0">
+        {event.startTime && <span className="opacity-50 text-[10px] mr-0.5">{event.startTime}</span>}
         {event.title}
       </span>
-      <Pencil size={9} className="opacity-0 group-hover:opacity-70 transition-opacity shrink-0" />
+      <Pencil size={8} className="opacity-0 group-hover:opacity-50 transition-opacity shrink-0" />
     </span>
   )
 }

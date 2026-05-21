@@ -35,20 +35,30 @@ function DraggableEventCard({ event, catStyle, dateStr, onEdit }: DraggableEvent
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className="flex items-start gap-1 rounded-lg px-2 py-1.5 cursor-grab active:cursor-grabbing group"
+      className="flex items-center gap-1.5 rounded px-2 py-1 cursor-grab active:cursor-grabbing group"
       style={{
-        background: catStyle.bgColor,
-        border: `1px solid ${catStyle.color}`,
+        background: 'rgba(255,255,255,0.04)',
+        borderLeft: `3px solid ${catStyle.color}`,
+        border: `1px solid rgba(255,255,255,0.06)`,
+        borderLeftWidth: 3,
+        borderLeftColor: catStyle.color,
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.4 : 1,
         touchAction: 'none',
       }}
       onClick={(e) => { e.stopPropagation(); onEdit(event) }}
     >
-      <GripVertical size={10} className="text-slate-600 mt-0.5 shrink-0" />
-      <span className="text-xs font-semibold leading-tight" style={{ color: catStyle.color }}>
-        {event.title}
-      </span>
+      <GripVertical size={9} className="text-slate-700 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <span className="text-xs font-medium leading-tight text-slate-300 truncate block">
+          {event.title}
+        </span>
+        {event.startTime && (
+          <span className="text-[10px] leading-tight" style={{ color: catStyle.color, opacity: 0.8 }}>
+            {event.startTime}{event.endTime ? ` – ${event.endTime}` : ''}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -278,7 +288,7 @@ export function WeeklyView() {
           <div
             className={isMobile
               ? 'flex flex-col gap-1.5 px-2 py-2'
-              : 'grid grid-cols-7 h-full'
+              : 'grid grid-cols-7'
             }
             style={isMobile ? {} : { minWidth: '700px' }}
           >
@@ -295,7 +305,7 @@ export function WeeklyView() {
                 dateStr={dateStr}
                 today={today}
                 isMobile={isMobile}
-                className={isMobile ? 'rounded-xl px-2 pt-1.5 pb-1' : 'flex flex-col border-r'}
+                className={isMobile ? 'rounded-xl px-2 pt-1.5 pb-1' : 'flex flex-col border-r min-h-24'}
               >
                 {/* Day header */}
                 <div
@@ -322,9 +332,10 @@ export function WeeklyView() {
                     </span>
                   ) : (
                     <span
-                      className={`text-lg font-black mt-0.5 w-9 h-9 flex items-center justify-center rounded-full ${
-                        today ? 'bg-yellow-400 text-black' : sunday ? 'text-red-400' : 'text-slate-200'
+                      className={`text-base font-black mt-0.5 w-7 h-7 flex items-center justify-center rounded-full ${
+                        today ? 'text-black' : sunday ? 'text-red-400' : 'text-slate-200'
                       }`}
+                      style={today ? { background: '#d4af37' } : {}}
                     >
                       {format(date, 'd')}
                     </span>
@@ -356,7 +367,7 @@ export function WeeklyView() {
                 </div>
 
                 {/* Content */}
-                <div className={isMobile ? 'space-y-1' : 'flex-1 p-2 space-y-1.5 overflow-y-auto'}>
+                <div className={isMobile ? 'space-y-1' : 'flex-1 p-1.5 space-y-1 overflow-y-auto'}>
                   {/* Events */}
                   {events.map((ev) => {
                     const catStyle = getCategoryStyle(ev.category, store.categories)
@@ -367,8 +378,12 @@ export function WeeklyView() {
                         role="button"
                         tabIndex={0}
                         aria-label={ev.title}
-                        className="inline-flex items-center gap-1 text-xs leading-tight cursor-pointer rounded px-1.5 py-0.5 mr-1"
-                        style={{ color: catStyle.color, background: catStyle.bgColor }}
+                        className="inline-flex items-center gap-1 text-xs leading-tight cursor-pointer rounded-sm px-1.5 py-0.5 mr-1"
+                        style={{
+                          color: '#cbd5e1',
+                          background: 'rgba(255,255,255,0.04)',
+                          borderLeft: `2px solid ${catStyle.color}`,
+                        }}
                         onClick={() => { setEditingEvent(ev); setModalDate(null) }}
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setEditingEvent(ev); setModalDate(null) } }}
                       >
@@ -468,17 +483,20 @@ export function WeeklyView() {
         <DragOverlay dropAnimation={null}>
           {activeEvent && activeCatStyle && (
             <div
-              className="flex items-start gap-1 rounded-lg px-2 py-1.5 pointer-events-none"
+              className="flex items-center gap-1.5 rounded px-2 py-1 pointer-events-none"
               style={{
-                background: activeCatStyle.bgColor,
-                border: `1px solid ${activeCatStyle.color}`,
-                opacity: 0.85,
-                transform: 'rotate(-2deg)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                background: '#0d1224',
+                borderLeft: `3px solid ${activeCatStyle.color}`,
+                border: `1px solid ${activeCatStyle.color}33`,
+                borderLeftWidth: 3,
+                borderLeftColor: activeCatStyle.color,
+                opacity: 0.9,
+                transform: 'rotate(-1deg)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
               }}
             >
-              <GripVertical size={10} className="text-slate-600 mt-0.5 shrink-0" />
-              <span className="text-xs font-semibold leading-tight" style={{ color: activeCatStyle.color }}>
+              <GripVertical size={9} className="text-slate-600 shrink-0" />
+              <span className="text-xs font-medium leading-tight text-slate-300">
                 {activeEvent.title}
               </span>
             </div>

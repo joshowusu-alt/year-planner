@@ -175,19 +175,22 @@ function EventBlock({ pe, onClick, categories, isMobile }: EventBlockProps) {
       <div
         className="h-full rounded overflow-hidden flex flex-col px-1.5 py-0.5"
         style={{
-          background: catStyle.bgColor,
+          background: 'rgba(13,18,36,0.85)',
           borderLeft: `3px solid ${catStyle.color}`,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+          border: `1px solid rgba(255,255,255,0.06)`,
+          borderLeftWidth: 3,
+          borderLeftColor: catStyle.color,
         }}
       >
         <span
-          className="text-xs font-semibold leading-tight truncate"
-          style={{ color: catStyle.color }}
+          className="text-xs font-medium leading-tight truncate"
+          style={{ color: '#e2e8f0' }}
         >
           {event.title}
         </span>
         {height >= 42 && (
-          <span className="text-xs leading-tight" style={{ color: catStyle.color, opacity: 0.75 }}>
+          <span className="text-[10px] leading-tight" style={{ color: catStyle.color, opacity: 0.85 }}>
             {startLabel}
           </span>
         )}
@@ -261,12 +264,21 @@ export function WeeklyTimeGrid() {
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-scroll to current hour (or 8:00) on mount
+  // Auto-scroll to first event (or 06:00) on mount
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const target = Math.max(nowMinutes - 60, 8 * 60)
-    el.scrollTop = minutesToPx(target)
+    // Find earliest timed event across all visible days
+    const allTimed = days.flatMap((d) => getEventsForDate(format(d, 'yyyy-MM-dd')).filter((e) => e.startTime))
+    let scrollTarget: number
+    if (allTimed.length > 0) {
+      const earliest = Math.min(...allTimed.map((e) => timeToMinutes(e.startTime!)))
+      scrollTarget = minutesToPx(Math.max(0, earliest - 60))
+    } else {
+      // No timed events: scroll to 06:00 or 1 hour before now (whichever is earlier in the day)
+      scrollTarget = minutesToPx(Math.min(6 * 60, Math.max(0, nowMinutes - 60)))
+    }
+    el.scrollTop = scrollTarget
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset selectedDayIndex when week changes — handled implicitly via effectiveDayStr snap above
@@ -605,11 +617,11 @@ export function WeeklyTimeGrid() {
                         return (
                           <div
                             key={ev.id}
-                            className="rounded px-1.5 py-0.5 text-xs font-semibold truncate cursor-pointer"
+                            className="rounded-sm px-1.5 py-0.5 text-xs font-medium truncate cursor-pointer"
                             style={{
-                              background: catStyle.bgColor,
+                              background: 'rgba(255,255,255,0.04)',
                               borderLeft: `3px solid ${catStyle.color}`,
-                              color: catStyle.color,
+                              color: '#cbd5e1',
                             }}
                             onClick={() => handleEditEvent(ev)}
                           >
@@ -643,7 +655,7 @@ export function WeeklyTimeGrid() {
                 >
                   <span
                     className="text-xs tabular-nums select-none"
-                    style={{ color: '#475569', lineHeight: 1 }}
+                    style={{ color: h < 6 ? '#2d3f52' : '#475569', lineHeight: 1 }}
                   >
                     {h === 0 ? '' : `${String(h).padStart(2, '0')}:00`}
                   </span>
@@ -671,6 +683,20 @@ export function WeeklyTimeGrid() {
                   }}
                   onClick={(e) => handleColumnClick(e, date)}
                 >
+                  {/* Early hours dim overlay (00:00–05:59) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 6 * HOUR_HEIGHT,
+                      background: 'rgba(0,0,0,0.18)',
+                      pointerEvents: 'none',
+                      zIndex: 1,
+                    }}
+                  />
+
                   {/* Horizontal hour lines */}
                   {HOURS.map((h) => (
                     <div
@@ -794,18 +820,21 @@ export function WeeklyTimeGrid() {
           <div
             className="h-full flex flex-col px-1.5 py-0.5"
             style={{
-              background: activeDragCatStyle.bgColor,
+              background: '#0d1224',
               borderLeft: `3px solid ${activeDragCatStyle.color}`,
+              border: `1px solid ${activeDragCatStyle.color}33`,
+              borderLeftWidth: 3,
+              borderLeftColor: activeDragCatStyle.color,
             }}
           >
             <span
-              className="text-xs font-semibold leading-tight truncate"
-              style={{ color: activeDragCatStyle.color }}
+              className="text-xs font-medium leading-tight truncate"
+              style={{ color: '#e2e8f0' }}
             >
               {activeDragEvent.title}
             </span>
             {activeDragEvent.startTime && (
-              <span className="text-xs" style={{ color: activeDragCatStyle.color, opacity: 0.75 }}>
+              <span className="text-[10px]" style={{ color: activeDragCatStyle.color, opacity: 0.85 }}>
                 {activeDragEvent.startTime}
               </span>
             )}

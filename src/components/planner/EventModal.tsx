@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, type FormEvent } from 'react'
-import { X, Trash2, Save, RotateCcw, ChevronDown, Clock, Bell, AlertTriangle, Globe } from 'lucide-react'
+import { X, Trash2, Save, RotateCcw, ChevronDown, Clock, Bell, AlertTriangle, Globe, Check } from 'lucide-react'
 import { canShowNotifications } from '../../lib/notifications'
 import type { PlannerEvent, RecurrenceRule, RecurrenceType } from '../../types'
 import { RECURRENCE_LABELS, getBaseEventId } from '../../types'
@@ -218,16 +218,23 @@ export function EventModal({ event, defaultDate, defaultStartTime, onSave, onDel
                         key={cat.id}
                         type="button"
                         onClick={() => setCategory(cat.id)}
-                        className="px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all"
+                        aria-pressed={active}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all"
                         style={{
-                          background: active ? cat.bgColor : 'transparent',
-                          color: cat.color,
-                          border: `1px solid ${active ? cat.color : '#243447'}`,
-                          outline: active ? `2px solid ${cat.color}` : 'none',
-                          outlineOffset: '2px',
+                          background: active ? 'rgba(255,255,255,0.05)' : 'transparent',
+                          color: active ? '#e2e8f0' : '#94a3b8',
+                          border: `1px solid ${active ? cat.color : '#1e2d40'}`,
+                          borderLeftWidth: active ? 3 : 1,
+                          borderLeftColor: active ? cat.color : '#1e2d40',
+                          outline: 'none',
                         }}
                       >
-                        {cat.label}
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: cat.color, opacity: active ? 1 : 0.45 }}
+                        />
+                        <span className="flex-1 truncate">{cat.label}</span>
+                        {active && <Check size={11} className="shrink-0" style={{ color: cat.color }} />}
                       </button>
                     )
                   })}

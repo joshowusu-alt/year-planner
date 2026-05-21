@@ -59,10 +59,11 @@ function DraggableEventChip({ event, catStyle, dateStr, onEdit }: DraggableEvent
       {...attributes}
       {...listeners}
       aria-label={event.title}
-      className="text-left text-xs px-1 py-0.5 rounded truncate leading-tight w-full cursor-grab active:cursor-grabbing"
+      className="text-left text-xs px-1.5 py-px rounded-sm truncate leading-tight w-full cursor-grab active:cursor-grabbing"
       style={{
-        background: catStyle.bgColor,
-        color: catStyle.color,
+        background: 'rgba(255,255,255,0.04)',
+        color: '#cbd5e1',
+        borderLeft: `2px solid ${catStyle.color}`,
         transform: CSS.Transform.toString(transform),
         opacity: isDragging ? 0.4 : 1,
         touchAction: 'none',
@@ -85,13 +86,13 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
   return (
     <div
       ref={isMobile ? undefined : setNodeRef}
-      className={`min-h-14 md:min-h-24 p-1 md:p-1.5 flex flex-col border-b border-r cursor-pointer transition-colors hover:bg-white/5 ${
-        !isCurrentMonth ? 'opacity-30' : ''
+      className={`min-h-12 md:min-h-[88px] p-1 md:p-1.5 flex flex-col border-b border-r cursor-pointer transition-colors hover:bg-white/5 ${
+        !isCurrentMonth ? 'opacity-25' : ''
       }`}
       style={{
         borderColor: showHighlight ? '#d4af37' : '#1e2d40',
-        ...(today ? { background: 'rgba(212,175,55,0.05)', borderTop: '2px solid #d4af37' } : {}),
-        ...(showHighlight ? { background: 'rgba(212,175,55,0.08)' } : {}),
+        ...(today ? { background: 'rgba(212,175,55,0.04)', boxShadow: 'inset 0 2px 0 #d4af37' } : {}),
+        ...(showHighlight ? { background: 'rgba(212,175,55,0.07)', borderColor: '#d4af3766' } : {}),
       }}
       onClick={() => onAddEvent(dateStr)}
     >
@@ -99,12 +100,9 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
       <div className="flex items-start justify-between mb-1">
         <span
           className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
-            today
-              ? 'bg-yellow-400 text-black'
-              : sunday
-              ? 'text-red-400'
-              : 'text-slate-400'
+            sunday && !today ? 'text-red-400' : !today ? 'text-slate-400' : ''
           }`}
+          style={today ? { background: '#d4af37', color: '#111827' } : {}}
         >
           {format(date, 'd')}
         </span>
@@ -124,9 +122,14 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
           return isMobile ? (
             <button
               key={ev.id}
-              className="text-left px-0.5 py-px rounded truncate leading-tight w-full"
+              className="text-left px-1 py-px rounded-sm truncate leading-tight w-full"
               aria-label={ev.title}
-              style={{ background: catStyle.bgColor, color: catStyle.color, fontSize: '0.6rem' }}
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                color: '#cbd5e1',
+                borderLeft: `2px solid ${catStyle.color}`,
+                fontSize: '0.6rem',
+              }}
               onClick={(e) => { e.stopPropagation(); onEditEvent(ev) }}
             >
               {ev.title}
@@ -142,8 +145,8 @@ function DayCell({ date, isCurrentMonth, events, taskCount, noteCount, onAddEven
           )
         })}
         {events.length > (isMobile ? 2 : 3) && (
-          <span className="px-0.5 leading-tight" style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 600 }}>
-            +{events.length - (isMobile ? 2 : 3)}
+          <span className="px-1 leading-tight" style={{ color: '#94a3b8', fontSize: '0.6rem', fontWeight: 600 }}>
+            +{events.length - (isMobile ? 2 : 3)} more
           </span>
         )}
       </div>
@@ -413,13 +416,14 @@ export function MonthlyCalendar() {
             <DragOverlay dropAnimation={null}>
               {activeEvent && activeCatStyle && (
                 <div
-                  className="text-xs px-1.5 py-0.5 rounded truncate pointer-events-none"
+                  className="text-xs px-1.5 py-0.5 rounded-sm truncate pointer-events-none"
                   style={{
-                    background: activeCatStyle.bgColor,
-                    color: activeCatStyle.color,
-                    border: `1px solid ${activeCatStyle.color}`,
-                    opacity: 0.85,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                    background: '#0d1224',
+                    color: '#e2e8f0',
+                    borderLeft: `3px solid ${activeCatStyle.color}`,
+                    border: `1px solid ${activeCatStyle.color}33`,
+                    opacity: 0.9,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
                     maxWidth: 140,
                   }}
                 >
