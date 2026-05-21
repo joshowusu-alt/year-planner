@@ -400,11 +400,11 @@ function StrategicGoalsPage({ intel, accent, year, coverage, orientation = 'port
 }
 
 // ─── Month Themes — portrait ──────────────────────────────────────────────────
-function MonthThemesPage({ intel, accent, year, coverage }: {
-  intel: YearIntelligence; accent: string; year: number; coverage: string
+function MonthThemesPage({ intel, accent, year, coverage, isLast }: {
+  intel: YearIntelligence; accent: string; year: number; coverage: string; isLast?: boolean
 }) {
   return (
-    <Page orientation="portrait">
+    <Page orientation="portrait" isLast={isLast}>
       <DocHeader title="Month Themes" year={year} accent={accent} />
       <SectionTitle label="Planning Language" accent={accent}>Month Themes Summary</SectionTitle>
 
@@ -634,7 +634,7 @@ function ExecutiveReport({ intel, accent, orgName, title, year, coverage, yearTh
         year={year} coverage={coverage} yearTheme={yearTheme} showLegend={options.includeLegend} />
       <YearIntelligencePage intel={intel} accent={accent} year={year} coverage={coverage} />
       <StrategicGoalsPage intel={intel} accent={accent} year={year} coverage={coverage} />
-      <MonthThemesPage intel={intel} accent={accent} year={year} coverage={coverage} />
+      <MonthThemesPage intel={intel} accent={accent} year={year} coverage={coverage} isLast={!options.includeAppendix} />
       {options.includeAppendix && plannerPages}
     </>
   )

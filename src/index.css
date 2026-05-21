@@ -104,9 +104,15 @@ body.stratum-generating-pdf #stratum-print-layout {
   top: 0;
   left: 0;
   z-index: 1;
+  width: max-content;
+  max-width: none !important;
 }
 body.stratum-generating-pdf #app-shell {
   display: none !important;
+}
+body.stratum-generating-pdf .stratum-page,
+body.stratum-generating-pdf .stratum-page * {
+  max-width: none !important;
 }
 
 @media print {
