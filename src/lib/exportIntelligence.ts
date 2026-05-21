@@ -13,6 +13,7 @@ export interface ExportOptions {
   includeThemes: boolean
   includeLegend: boolean
   includeAppendix: boolean
+  pageIds?: string[]
   density: ExportDensity
   colourMode: ExportColourMode
 }

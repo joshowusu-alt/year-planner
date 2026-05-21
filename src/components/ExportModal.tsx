@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowRight,
   CalendarDays,
@@ -26,6 +26,13 @@ const QUARTERS = [
   { label: 'Q4', title: 'Finish', months: [10, 11, 12] },
 ]
 
+interface ExportPagePreview {
+  id: string
+  title: string
+  description: string
+  orientation: 'Portrait' | 'Landscape'
+}
+
 interface Props {
   onClose: () => void
   onExport: (config: ExportConfig) => void
@@ -43,11 +50,13 @@ export function ExportModal({ onClose, onExport }: Props) {
   const [selectedYear, setSelectedYear] = useState(currentYear)
   const [mode, setMode] = useState<ExportMode>('executive-report')
   const [options, setOptions] = useState<ExportOptions>(defaultExportOptions())
+  const [selectedPageIds, setSelectedPageIds] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<Set<number>>(
     new Set(Array.from({ length: 12 }, (_, i) => i + 1)),
   )
 
   const orderedMonths = Array.from(selected).sort((a, b) => a - b)
+  const monthSelectionKey = orderedMonths.join(',')
   const monthThemes = new Map(
     store.monthMeta
       .filter((meta) => meta.year === selectedYear && meta.theme.trim())
@@ -59,10 +68,7 @@ export function ExportModal({ onClose, onExport }: Props) {
     return eventDate.getFullYear() === selectedYear && selected.has(eventDate.getMonth() + 1)
   }).length
   const selectedThemeCount = orderedMonths.filter((month) => monthThemes.has(month)).length
-  const calendarPages = Math.ceil(orderedMonths.length / 3)
-  const totalPages = mode === 'forward-planner'
-    ? (orderedMonths.length > 0 ? 2 + calendarPages : 0)
-    : (orderedMonths.length > 0 ? 4 + calendarPages : 0)
+  const monthPages = orderedMonths.length
   const coverage = formatCoverage(selectedYear, orderedMonths)
   const plannerName = store.plannerTitle.trim() || 'Executive Planning System'
   const organizationName = store.organizationName.trim() || 'STRATUM'
@@ -73,6 +79,62 @@ export function ExportModal({ onClose, onExport }: Props) {
     .filter((month) => monthThemes.has(month))
     .map((month) => `${MONTH_SHORT[month - 1]}  ${monthThemes.get(month)}`)
   const yearOptions = Array.from({ length: 5 }, (_, index) => currentYear - 2 + index)
+  const documentPages = useMemo<ExportPagePreview[]>(() => {
+    const monthItems = orderedMonths.map((month) => ({
+      id: `month-${month}`,
+      title: `${MONTH_NAMES_FULL[month - 1]} planner`,
+      description: 'Readable daily activity sheet with event indicators and worksheet space.',
+      orientation: 'Landscape' as const,
+    }))
+
+    if (mode === 'forward-planner') {
+      return [
+        {
+          id: 'cover',
+          title: 'Forward planner cover',
+          description: 'Identity, coverage, and planning metrics.',
+          orientation: 'Landscape',
+        },
+        {
+          id: 'goals',
+          title: 'Strategic goals',
+          description: 'Goal framework for the selected year.',
+          orientation: 'Landscape',
+        },
+        ...monthItems,
+      ]
+    }
+
+    return [
+      {
+        id: 'cover',
+        title: 'Executive cover',
+        description: 'Brand, year framing, themes, and executive metrics.',
+        orientation: 'Portrait',
+      },
+      {
+        id: 'year-intelligence',
+        title: 'Year intelligence',
+        description: 'Quarter activity, category mix, rhythms, and highlights.',
+        orientation: 'Portrait',
+      },
+      {
+        id: 'goals',
+        title: 'Strategic goals',
+        description: 'Goal worksheet and progress summary.',
+        orientation: 'Portrait',
+      },
+      {
+        id: 'month-themes',
+        title: 'Month themes',
+        description: 'Quarter-by-quarter theme worksheet.',
+        orientation: 'Portrait',
+      },
+      ...(options.includeAppendix ? monthItems : []),
+    ]
+  }, [mode, monthSelectionKey, options.includeAppendix])
+  const selectedDocumentPages = documentPages.filter((page) => selectedPageIds.has(page.id))
+  const totalPages = selectedDocumentPages.length
 
   function setSelection(months: number[]) {
     setSelected(new Set(months))
@@ -121,6 +183,31 @@ export function ExportModal({ onClose, onExport }: Props) {
   function patchOptions(patch: Partial<ExportOptions>) {
     setOptions((current) => ({ ...current, ...patch }))
   }
+
+  function togglePage(pageId: string) {
+    setSelectedPageIds((current) => {
+      const next = new Set(current)
+      if (next.has(pageId)) next.delete(pageId)
+      else next.add(pageId)
+      return next
+    })
+  }
+
+  function setAllPages(selected: boolean) {
+    setSelectedPageIds(selected ? new Set(documentPages.map((page) => page.id)) : new Set())
+  }
+
+  useEffect(() => {
+    setSelectedPageIds((current) => {
+      const validIds = new Set(documentPages.map((page) => page.id))
+      const next = new Set([...current].filter((id) => validIds.has(id)))
+      const shouldSelectAll = current.size === 0 || next.size === 0
+      if (shouldSelectAll) {
+        documentPages.forEach((page) => next.add(page.id))
+      }
+      return next
+    })
+  }, [documentPages])
 
   return (
     <div
@@ -225,7 +312,7 @@ export function ExportModal({ onClose, onExport }: Props) {
                   <div className="grid sm:grid-cols-4 gap-3">
                     {[
                       { label: 'Months', value: `${orderedMonths.length}`, tone: '#d4af37' },
-                      { label: 'Calendar pages', value: `${calendarPages || 0}`, tone: '#60a5fa' },
+                      { label: 'Month pages', value: `${monthPages || 0}`, tone: '#60a5fa' },
                       { label: 'Goals', value: `${selectedGoalCount}`, tone: '#34d399' },
                       { label: 'Themes', value: `${selectedThemeCount}`, tone: '#f97316' },
                     ].map((item) => (
@@ -252,7 +339,7 @@ export function ExportModal({ onClose, onExport }: Props) {
                 <div className="grid md:grid-cols-2 gap-3">
                   {([
                     ['executive-report', 'Executive Report', 'Strategic summary, goals, analysis, and calendar appendix.'],
-                    ['forward-planner', 'Forward Planner', 'Three-month print spreads for daily operational planning.'],
+                    ['forward-planner', 'Forward Planner', 'Readable month sheets for daily operational planning.'],
                   ] as const).map(([id, label, caption]) => {
                     const active = mode === id
                     return (
@@ -328,8 +415,10 @@ export function ExportModal({ onClose, onExport }: Props) {
                   </label>
                   <label className="rounded-2xl p-4 flex items-center justify-between gap-4" style={{ background: '#08101f', border: '1px solid #243447' }}>
                     <span>
-                      <span className="block text-sm font-bold text-white">Appendix</span>
-                      <span className="block text-xs mt-1" style={{ color: '#94a3b8' }}>Keep detail pages available where relevant.</span>
+                      <span className="block text-sm font-bold text-white">Calendar appendix</span>
+                      <span className="block text-xs mt-1" style={{ color: '#94a3b8' }}>
+                        Add month sheets to the executive report.
+                      </span>
                     </span>
                     <input type="checkbox" checked={options.includeAppendix} onChange={(event) => patchOptions({ includeAppendix: event.target.checked })} />
                   </label>
@@ -522,7 +611,7 @@ export function ExportModal({ onClose, onExport }: Props) {
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { icon: CalendarRange, label: 'Pages', value: `${totalPages || 0}` },
-                    { icon: Layers3, label: 'Calendar groups', value: `${calendarPages || 0}` },
+                    { icon: Layers3, label: 'Month sheets', value: `${monthPages || 0}` },
                     { icon: Target, label: 'Year goals', value: `${selectedGoalCount}` },
                     { icon: CalendarDays, label: 'Selected months', value: `${orderedMonths.length}` },
                   ].map((item) => (
@@ -551,8 +640,8 @@ export function ExportModal({ onClose, onExport }: Props) {
                     <div className="flex items-start gap-3">
                       <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black" style={{ background: 'rgba(96,165,250,0.12)', color: '#93c5fd' }}>2</span>
                       <div>
-                        <p className="text-sm font-bold text-white">{mode === 'forward-planner' ? 'Forward planner spreads' : 'Report analysis'}</p>
-                        <p className="text-xs" style={{ color: '#94a3b8' }}>{mode === 'forward-planner' ? 'Three months per page with dense planning rows.' : 'Year, quarter, category, and recurring rhythm intelligence.'}</p>
+                        <p className="text-sm font-bold text-white">{mode === 'forward-planner' ? 'Readable month sheets' : 'Report analysis'}</p>
+                        <p className="text-xs" style={{ color: '#94a3b8' }}>{mode === 'forward-planner' ? 'One selected month per landscape page for legible daily planning.' : 'Year, quarter, category, and recurring rhythm intelligence.'}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -565,6 +654,72 @@ export function ExportModal({ onClose, onExport }: Props) {
                       </div>
                     </div>
                   </div>
+                </div>
+              </section>
+
+              <section className="rounded-[28px] p-5 sm:p-6" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Page preview</p>
+                    <h3 className="text-lg font-black text-white mt-1">Choose exactly what prints</h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setAllPages(true)}
+                      className="px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-[0.14em]"
+                      style={{ background: '#111827', color: '#f8fafc', border: '1px solid #243447' }}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setAllPages(false)}
+                      className="px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-[0.14em]"
+                      style={{ background: '#111827', color: '#94a3b8', border: '1px solid #243447' }}
+                    >
+                      None
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+                  {documentPages.map((page, index) => {
+                    const active = selectedPageIds.has(page.id)
+                    return (
+                      <button
+                        key={page.id}
+                        onClick={() => togglePage(page.id)}
+                        className="w-full rounded-2xl p-3.5 text-left transition-all"
+                        style={{
+                          background: active ? 'rgba(212,175,55,0.12)' : '#08101f',
+                          border: active ? '1px solid rgba(212,175,55,0.32)' : '1px solid #243447',
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span
+                            className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-black"
+                            style={{
+                              background: active ? '#d4af37' : '#111827',
+                              color: active ? '#08101f' : '#64748b',
+                              border: active ? 'none' : '1px solid #243447',
+                            }}
+                          >
+                            {active ? <Check size={14} /> : index + 1}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center justify-between gap-3">
+                              <span className="text-sm font-black" style={{ color: active ? '#f8fafc' : '#cbd5e1' }}>
+                                {page.title}
+                              </span>
+                              <span className="text-[10px] font-black uppercase tracking-[0.16em] shrink-0" style={{ color: active ? '#fde68a' : '#64748b' }}>
+                                {page.orientation}
+                              </span>
+                            </span>
+                            <span className="block text-xs mt-1" style={{ color: '#94a3b8' }}>{page.description}</span>
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </section>
 
@@ -604,13 +759,24 @@ export function ExportModal({ onClose, onExport }: Props) {
           <div className="flex-1 min-w-0 px-1">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Export action</p>
             <p className="text-sm truncate" style={{ color: '#94a3b8' }}>
-              Generates the {mode === 'forward-planner' ? 'forward planner' : 'executive report'} and downloads it directly as a PDF — no browser dialog required.
+              Generates {totalPages} selected page{totalPages === 1 ? '' : 's'} directly as a PDF — no browser dialog required.
             </p>
           </div>
 
           <button
-            onClick={() => orderedMonths.length > 0 && onExport({ mode, year: selectedYear, months: orderedMonths, options })}
-            disabled={orderedMonths.length === 0}
+            onClick={() => {
+              if (orderedMonths.length === 0 || selectedDocumentPages.length === 0) return
+              onExport({
+                mode,
+                year: selectedYear,
+                months: orderedMonths,
+                options: {
+                  ...options,
+                  pageIds: selectedDocumentPages.map((page) => page.id),
+                },
+              })
+            }}
+            disabled={orderedMonths.length === 0 || selectedDocumentPages.length === 0}
             className="sm:min-w-72 px-5 py-3.5 rounded-2xl text-sm font-black tracking-[0.16em] uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
               background: 'linear-gradient(135deg, #d4af37 0%, #f0d777 100%)',

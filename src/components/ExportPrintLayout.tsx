@@ -8,7 +8,6 @@ import {
   defaultExportOptions,
   type ExportConfig,
   type MonthSummary,
-  type QuarterSummary,
   type YearIntelligence,
 } from '../lib/exportIntelligence'
 
@@ -38,6 +37,11 @@ interface Props {
   months: number[]
   mode?: ExportConfig['mode']
   options?: Partial<ExportConfig['options']>
+}
+
+interface RenderedPage {
+  id: string
+  render: (isLast: boolean) => React.ReactNode
 }
 
 // ─── Page wrapper ─────────────────────────────────────────────────────────────
@@ -513,106 +517,126 @@ function CoverLandscape({ intel, accent, orgName, title, year, coverage }: {
   )
 }
 
-// ─── Landscape quarter planner page ──────────────────────────────────────────
-const DAY_ROW_H = 19 // px per day row — 31 rows × 19px = 589px
+// ─── Landscape month planner page ────────────────────────────────────────────
+const MONTH_ROW_H = 19
 
-function MonthColumn({ month }: { month: MonthSummary }) {
-  return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', border: `1px solid ${LINE}`,
-        borderRadius: 7, overflow: 'hidden', minWidth: 0 }}>
-      {/* Month header */}
-      <div style={{ background: NAVY, color: '#fff', padding: '6px 8px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <strong style={{ fontSize: 10, letterSpacing: '0.1em' }}>{month.name}</strong>
-          <span style={{ fontSize: 6.5, color: '#94a3b8' }}>{month.eventCount} events</span>
-        </div>
-        <div style={{ fontSize: 6.5, marginTop: 2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-            color: month.theme ? '#f8d76b' : '#475569', fontStyle: month.theme ? 'normal' : 'italic' }}>
-          {month.theme ?? 'Add monthly focus'}
-        </div>
-      </div>
-
-      {/* Column headers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '17px 15px 1fr', background: LIGHT,
-          borderBottom: `1px solid ${LINE}`, flexShrink: 0 }}>
-        {(['DAY', '#', 'PLAN'] as const).map((hdr) => (
-          <span key={hdr} style={{ padding: '2px 3px', fontSize: 5.5, fontWeight: 900, color: SOFT, letterSpacing: '0.1em' }}>
-            {hdr}
-          </span>
-        ))}
-      </div>
-
-      {/* Day rows */}
-      <div style={{ overflow: 'hidden', flex: 1 }}>
-        {month.days.map((day) => {
-          const isToday = day.dateStr === TODAY
-          return (
-            <div key={day.dateStr} style={{
-              display: 'grid', gridTemplateColumns: '17px 15px 1fr',
-              height: DAY_ROW_H, borderBottom: '1px solid #f1f5f9', overflow: 'hidden',
-              background: isToday ? '#fef9e7' : day.weekend ? '#fffbeb' : '#fff',
-            }}>
-              <span style={{ padding: '2px 3px', fontSize: 5.5, fontWeight: 900, alignSelf: 'center',
-                  color: day.weekend ? '#d97706' : SOFT }}>{day.weekday}</span>
-              <span style={{ padding: '2px 2px', fontSize: 7, fontWeight: 900, alignSelf: 'center',
-                  color: isToday ? '#b45309' : INK }}>{day.day}</span>
-              <div style={{ padding: '1px 3px', display: 'flex', flexDirection: 'column',
-                  justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
-                {day.visibleEvents.map((ev) => (
-                  <div key={`${ev.event.id}-${day.dateStr}`}
-                    style={{ display: 'flex', alignItems: 'center', gap: 3, lineHeight: 1.1, overflow: 'hidden' }}>
-                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: ev.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 6.5, color: INK, overflow: 'hidden',
-                        whiteSpace: 'nowrap', textOverflow: 'ellipsis', flex: 1 }}>
-                      {ev.timeLabel && <span style={{ color: MUTED, fontSize: 6, marginRight: 2 }}>{ev.timeLabel}</span>}
-                      {ev.shortTitle}
-                    </span>
-                  </div>
-                ))}
-                {day.overflow > 0 && (
-                  <span style={{ fontSize: 6, color: '#b45309', fontWeight: 800 }}>+{day.overflow}</span>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function QuarterPlannerPage({ quarter, accent, year, coverage, legendItems, isLast }: {
-  quarter: QuarterSummary
-  accent: string; year: number; coverage: string
-  legendItems: Array<{ category: EventCategoryDef; count: number; share: number }>
+function MonthPlannerPage({ month, accent, year, coverage, showLegend, isLast }: {
+  month: MonthSummary
+  accent: string
+  year: number
+  coverage: string
+  showLegend: boolean
   isLast: boolean
 }) {
   return (
     <Page orientation="landscape" isLast={isLast}>
-      <DocHeader title={`Forward Planner Q${quarter.quarter}`} year={year} accent={accent} />
+      <DocHeader title={`Forward Planner ${month.name}`} year={year} accent={accent} />
 
-      {/* Quarter title + legend */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
-          marginTop: 8, marginBottom: 8, flexShrink: 0 }}>
-        <div>
-          <Label text="Three-Month Planning Block" accent={accent} />
-          <h2 style={{ margin: '2px 0 0', fontSize: 15, fontWeight: 900, color: NAVY, lineHeight: 1.05 }}>
-            {quarter.months.map((m) => m.name).join(' / ')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 310px', gap: 14,
+          marginTop: 9, marginBottom: 8, alignItems: 'end', flexShrink: 0 }}>
+        <div style={{ minWidth: 0 }}>
+          <Label text={`Month Planning Sheet · Q${Math.ceil(month.month / 3)}`} accent={accent} />
+          <h2 style={{ margin: '2px 0 0', fontSize: 24, fontWeight: 900, color: NAVY, lineHeight: 1 }}>
+            {month.name}
           </h2>
+          <p style={{ margin: '5px 0 0', fontSize: 9, color: month.theme ? INK : SOFT,
+              fontStyle: month.theme ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {month.theme || 'Theme space - add monthly focus'}
+          </p>
         </div>
-        {legendItems.length > 0 && (
-          <div style={{ maxWidth: 420 }}>
-            <CategoryLegend items={legendItems} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
+          <MetricCard label="Events" value={`${month.eventCount}`} note="Scheduled" accent={accent} />
+          <MetricCard label="Busy Week" value={month.busiestWeek.startsWith('Week') ? month.busiestWeek.replace('Week of ', '').split(' ')[0] : '-'}
+            note={month.busiestWeek} accent={accent} />
+          <MetricCard label="Categories" value={`${month.topCategories.length}`} note="Top groups" accent={accent} />
+        </div>
+      </div>
+
+      {showLegend && month.topCategories.length > 0 && (
+        <div style={{ marginBottom: 8, flexShrink: 0 }}>
+          <CategoryLegend items={month.topCategories.map(({ category, count }) => ({
+            category,
+            count,
+            share: month.eventCount ? Math.round((count / month.eventCount) * 100) : 0,
+          }))} />
+        </div>
+      )}
+
+      <div style={{ border: `1px solid ${LINE}`, borderRadius: 8, overflow: 'hidden',
+          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '42px 30px 1fr', background: LIGHT,
+            borderBottom: `1px solid ${LINE}`, flexShrink: 0 }}>
+          {(['DAY', '#', 'PLAN / ACTIVITY'] as const).map((header) => (
+            <span key={header} style={{ padding: '5px 8px', fontSize: 7, fontWeight: 900, color: SOFT, letterSpacing: '0.12em' }}>
+              {header}
+            </span>
+          ))}
+        </div>
+
+        <div style={{ overflow: 'hidden', flex: 1 }}>
+          {month.days.map((day) => {
+            const isToday = day.dateStr === TODAY
+            const visibleEvents = day.events.slice(0, 2)
+            const overflow = Math.max(0, day.events.length - visibleEvents.length)
+
+            return (
+              <div key={day.dateStr} style={{
+                display: 'grid',
+                gridTemplateColumns: '42px 30px 1fr',
+                height: MONTH_ROW_H,
+                borderBottom: '1px solid #edf2f7',
+                overflow: 'hidden',
+                background: isToday ? '#fff7d6' : day.weekend ? '#fffaf0' : '#fff',
+              }}>
+                <span style={{ padding: '4px 8px', fontSize: 7.5, fontWeight: 900, alignSelf: 'center',
+                    color: day.weekend ? '#d97706' : SOFT }}>{day.weekday}</span>
+                <span style={{ padding: '4px 4px', fontSize: 9, fontWeight: 900, alignSelf: 'center',
+                    color: isToday ? '#b45309' : INK }}>{day.day}</span>
+                <div style={{ padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 10,
+                    minWidth: 0, overflow: 'hidden' }}>
+                  {visibleEvents.length === 0 ? (
+                    <span style={{ fontSize: 8, color: '#cbd5e1' }}> </span>
+                  ) : (
+                    visibleEvents.map((event) => (
+                      <div key={`${event.event.id}-${day.dateStr}`} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        minWidth: 0,
+                        maxWidth: visibleEvents.length > 1 ? '48%' : '86%',
+                        overflow: 'hidden',
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: event.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 8.6, color: INK, whiteSpace: 'nowrap', overflow: 'hidden',
+                            textOverflow: 'ellipsis', lineHeight: 1.15 }}>
+                          {event.timeLabel && <span style={{ color: MUTED, fontSize: 7.5, marginRight: 3 }}>{event.timeLabel}</span>}
+                          {event.title}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                  {overflow > 0 && (
+                    <span style={{ fontSize: 8, color: '#b45309', fontWeight: 900, flexShrink: 0 }}>+{overflow} more</span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', flexShrink: 0,
+            borderTop: `1px solid ${LINE}`, background: '#fff' }}>
+          {['Key outcomes', 'Risks / dependencies', 'Follow-ups'].map((label) => (
+            <div key={label} style={{ padding: '8px 10px', borderRight: `1px solid ${LINE}`, minHeight: 46 }}>
+              <Label text={label} accent={accent} />
+              <div style={{ borderTop: '1px dashed #cbd5e1', marginTop: 9 }} />
+              <div style={{ borderTop: '1px dashed #e2e8f0', marginTop: 11 }} />
+            </div>
+          ))}
+        </div>
           </div>
-        )}
-      </div>
 
-      {/* 3-column planner grid */}
-      <div style={{ display: 'flex', gap: 8, flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {quarter.months.map((month) => <MonthColumn key={month.month} month={month} />)}
-      </div>
-
-      <DocFooter pageName={`Q${quarter.quarter} · ${coverage}`} accent={accent} />
+      <DocFooter pageName={`${month.name} · ${coverage}`} accent={accent} />
     </Page>
   )
 }
@@ -622,20 +646,43 @@ function ExecutiveReport({ intel, accent, orgName, title, year, coverage, yearTh
   intel: YearIntelligence; accent: string; orgName: string; title: string
   year: number; coverage: string; yearTheme: string; options: ExportConfig['options']
 }) {
-  const plannerPages = intel.quarters.map((q, i) => (
-    <QuarterPlannerPage key={q.quarter} quarter={q} accent={accent} year={year} coverage={coverage}
-      legendItems={options.includeLegend ? intel.categoryLegend : []}
-      isLast={i === intel.quarters.length - 1} />
-  ))
+  const selectedPages = options.pageIds?.length ? new Set(options.pageIds) : null
+  const enabled = (id: string) => !selectedPages || selectedPages.has(id)
+  const pages: RenderedPage[] = [
+    {
+      id: 'cover',
+      render: () => <CoverPortrait intel={intel} accent={accent} orgName={orgName} title={title}
+        year={year} coverage={coverage} yearTheme={yearTheme} showLegend={options.includeLegend} />,
+    },
+    {
+      id: 'year-intelligence',
+      render: () => <YearIntelligencePage intel={intel} accent={accent} year={year} coverage={coverage} />,
+    },
+    {
+      id: 'goals',
+      render: () => <StrategicGoalsPage intel={intel} accent={accent} year={year} coverage={coverage} />,
+    },
+    {
+      id: 'month-themes',
+      render: (isLast: boolean) => <MonthThemesPage intel={intel} accent={accent} year={year} coverage={coverage} isLast={isLast} />,
+    },
+    ...(options.includeAppendix
+      ? intel.months.map((month) => ({
+          id: `month-${month.month}`,
+          render: (isLast: boolean) => <MonthPlannerPage month={month} accent={accent} year={year} coverage={coverage}
+            showLegend={options.includeLegend}
+            isLast={isLast} />,
+        }))
+      : []),
+  ].filter((page) => enabled(page.id))
 
   return (
     <>
-      <CoverPortrait intel={intel} accent={accent} orgName={orgName} title={title}
-        year={year} coverage={coverage} yearTheme={yearTheme} showLegend={options.includeLegend} />
-      <YearIntelligencePage intel={intel} accent={accent} year={year} coverage={coverage} />
-      <StrategicGoalsPage intel={intel} accent={accent} year={year} coverage={coverage} />
-      <MonthThemesPage intel={intel} accent={accent} year={year} coverage={coverage} isLast={!options.includeAppendix} />
-      {options.includeAppendix && plannerPages}
+      {pages.map((page, index) => (
+        <div key={page.id} style={{ display: 'contents' }}>
+          {page.render(index === pages.length - 1)}
+        </div>
+      ))}
     </>
   )
 }
@@ -644,14 +691,31 @@ function ForwardPlanner({ intel, accent, orgName, title, year, coverage, options
   intel: YearIntelligence; accent: string; orgName: string; title: string
   year: number; coverage: string; options: ExportConfig['options']
 }) {
+  const selectedPages = options.pageIds?.length ? new Set(options.pageIds) : null
+  const enabled = (id: string) => !selectedPages || selectedPages.has(id)
+  const pages: RenderedPage[] = [
+    {
+      id: 'cover',
+      render: () => <CoverLandscape intel={intel} accent={accent} orgName={orgName} title={title} year={year} coverage={coverage} />,
+    },
+    {
+      id: 'goals',
+      render: () => <StrategicGoalsPage intel={intel} accent={accent} year={year} coverage={coverage} orientation="landscape" />,
+    },
+    ...intel.months.map((month) => ({
+      id: `month-${month.month}`,
+      render: (isLast: boolean) => <MonthPlannerPage month={month} accent={accent} year={year} coverage={coverage}
+        showLegend={options.includeLegend}
+        isLast={isLast} />,
+    })),
+  ].filter((page) => enabled(page.id))
+
   return (
     <>
-      <CoverLandscape intel={intel} accent={accent} orgName={orgName} title={title} year={year} coverage={coverage} />
-      <StrategicGoalsPage intel={intel} accent={accent} year={year} coverage={coverage} orientation="landscape" />
-      {intel.quarters.map((q, i) => (
-        <QuarterPlannerPage key={q.quarter} quarter={q} accent={accent} year={year} coverage={coverage}
-          legendItems={options.includeLegend ? intel.categoryLegend : []}
-          isLast={i === intel.quarters.length - 1} />
+      {pages.map((page, index) => (
+        <div key={page.id} style={{ display: 'contents' }}>
+          {page.render(index === pages.length - 1)}
+        </div>
       ))}
     </>
   )
