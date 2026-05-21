@@ -45,6 +45,8 @@ function StatusBadge({ status }: { status: GoalStatus }) {
 interface GoalFormData {
   title: string
   description: string
+  whyItMatters: string
+  successMeasure: string
   quarter: 1 | 2 | 3 | 4
   month?: number
   year: number
@@ -66,6 +68,8 @@ function GoalModal({
   const [form, setForm] = useState<GoalFormData>({
     title: initial?.title ?? '',
     description: initial?.description ?? '',
+    whyItMatters: initial?.whyItMatters ?? '',
+    successMeasure: initial?.successMeasure ?? '',
     quarter: initial?.quarter ?? 1,
     month: initial?.month,
     year: initial?.year ?? currentYear,
@@ -97,9 +101,10 @@ function GoalModal({
         <div className="overflow-y-auto flex-1 p-6 space-y-4">
 
         <input
+          autoFocus
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
-          placeholder="Goal title..."
+          placeholder="e.g. Launch youth outreach programme"
           className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
           style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
         />
@@ -107,11 +112,37 @@ function GoalModal({
         <textarea
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="Description (optional)"
+          placeholder="What outcome are you pursuing?"
           rows={2}
           className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
           style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
         />
+
+        {/* Strategic fields */}
+        <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #1e2d40', paddingTop: '1rem' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>Strategic Context</p>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Why This Matters</label>
+            <textarea
+              value={form.whyItMatters}
+              onChange={(e) => setForm({ ...form, whyItMatters: e.target.value })}
+              placeholder="Why is this important this year?"
+              rows={2}
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1 uppercase tracking-wider">Success Measure</label>
+            <input
+              value={form.successMeasure}
+              onChange={(e) => setForm({ ...form, successMeasure: e.target.value })}
+              placeholder="How will you know this is complete?"
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+              style={{ background: '#1e2d40', border: '1px solid #243447', color: '#e2e8f0' }}
+            />
+          </div>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -517,7 +548,13 @@ function ParetoInsight({ goals }: { goals: Goal[] }) {
 export function GoalsPage() {
   const { store, addGoal, currentYear } = usePlanner()
   const [showModal, setShowModal] = useState(false)
+  const [modalInitialQ, setModalInitialQ] = useState<1 | 2 | 3 | 4>(1)
   const [filterQ, setFilterQ] = useState<number | 'all'>('all')
+
+  function openModalForQuarter(q: 1 | 2 | 3 | 4) {
+    setModalInitialQ(q)
+    setShowModal(true)
+  }
 
   const goals = store.goals.filter(
     (g) => g.year === currentYear && (filterQ === 'all' || g.quarter === filterQ)
@@ -559,7 +596,7 @@ export function GoalsPage() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => { setModalInitialQ(1); setShowModal(true) }}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold"
           style={{ background: '#d4af37', color: '#111827' }}
         >
@@ -595,7 +632,16 @@ export function GoalsPage() {
               <span className="text-xs text-slate-600">({qGoals.length})</span>
             </div>
             {qGoals.length === 0 ? (
-              <p className="text-xs text-slate-600 pl-6">No goals for Q{q}</p>
+              <div className="pl-6 flex items-center gap-3">
+                <p className="text-xs text-slate-600">No Q{q} goals yet</p>
+                <button
+                  onClick={() => openModalForQuarter(q as 1|2|3|4)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors hover:opacity-90"
+                  style={{ background: 'rgba(212,175,55,0.1)', color: '#d4af37', border: '1px solid rgba(212,175,55,0.2)' }}
+                >
+                  <Plus size={10} /> Add Q{q} Goal
+                </button>
+              </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {qGoals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
@@ -605,16 +651,45 @@ export function GoalsPage() {
         ))}
 
         {goals.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Target size={48} className="text-slate-700 mb-3" />
-            <p className="text-slate-500 font-semibold">No goals yet</p>
-            <p className="text-xs text-slate-600 mt-1">Click "New Goal" to get started</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center px-6 max-w-sm mx-auto">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(212,175,55,0.1)' }}>
+              <Target size={32} style={{ color: '#d4af37' }} />
+            </div>
+            <p className="text-base font-black text-white mb-1">Set your first goal</p>
+            <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+              Goals drive your year. Start with your annual vision, break it into quarters, then track milestones.
+            </p>
+            <div className="space-y-2 text-left w-full">
+              {[
+                { step: '1', label: 'Define your year vision', hint: 'What does success look like in 12 months?' },
+                { step: '2', label: 'Set 3–5 vital goals', hint: 'Focus beats breadth. Choose fewer, go deeper.' },
+                { step: '3', label: 'Add milestones + due dates', hint: 'Break big goals into trackable checkpoints.' },
+              ].map(({ step, label, hint }) => (
+                <div key={step} className="rounded-lg p-3 flex items-start gap-3" style={{ background: '#0d1224', border: '1px solid #1e2d40' }}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-black mt-0.5" style={{ background: 'rgba(212,175,55,0.15)', color: '#d4af37' }}>
+                    {step}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">{label}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{hint}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => { setModalInitialQ(1); setShowModal(true) }}
+              className="mt-6 px-5 py-2.5 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
+              style={{ background: '#d4af37', color: '#0a0e1a' }}
+            >
+              + Add First Goal
+            </button>
           </div>
         )}
       </div>
 
       {showModal && (
         <GoalModal
+          initial={{ quarter: modalInitialQ }}
           onSave={(data) => addGoal({ ...data, userId: undefined })}
           onClose={() => setShowModal(false)}
         />
